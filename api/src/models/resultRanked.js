@@ -20,6 +20,8 @@ const PlayerSchema = new mongoose.Schema({
   eloAfter: { type: Number },
 
   isReady: { type: Boolean, default: false },
+
+  vote: { type: String, enum: ["red", "blue", "cancel", null], default: null },
 });
 
 const Schema = new mongoose.Schema(

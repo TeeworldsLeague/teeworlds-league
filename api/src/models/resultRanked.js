@@ -70,7 +70,6 @@ const Schema = new mongoose.Schema(
     textChannelDisplayFinalResultId: { type: String, trim: true },
     textChannelDisplayResultId: { type: String, trim: true },
     messageResultId: { type: String, trim: true },
-    readyButtonId: { type: String, trim: true },
     voiceRedChannelId: { type: String, trim: true },
     voiceBlueChannelId: { type: String, trim: true },
   },

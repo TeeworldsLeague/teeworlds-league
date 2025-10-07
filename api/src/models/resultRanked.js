@@ -33,6 +33,8 @@ const Schema = new mongoose.Schema(
     modeId: { type: ObjectId },
     modeName: { type: String, trim: true },
 
+    state: { type: String, trim: true, enum: ["initial", "created", "ready_up", "in_progress", "completed", "cancelled", "closed"], default: "initial" },
+
     date: { type: Date, default: Date.now },
     mode: { type: String, trim: true },
     map: { type: String, trim: true },

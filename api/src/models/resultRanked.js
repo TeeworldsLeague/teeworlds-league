@@ -44,13 +44,9 @@ const Schema = new mongoose.Schema(
     totalTimeMinutes: { type: Number },
     totalTime: { type: Number },
 
-    winnerId: { type: ObjectId, trim: true },
-    winnerName: { type: String, trim: true },
     winnerSide: { type: String, trim: true, enum: ["red", "blue", "", null] },
-
-    looserId: { type: ObjectId, trim: true },
-    looserName: { type: String, trim: true },
     looserSide: { type: String, trim: true },
+
 
     blueScore: { type: Number },
     redScore: { type: Number },
@@ -94,11 +90,7 @@ Schema.methods.responseModel = function () {
     scoreLimit: this.scoreLimit,
     timeLimit: this.timeLimit,
     isForfeit: this.isForfeit,
-    winnerId: this.winnerId,
-    winnerName: this.winnerName,
     winnerSide: this.winnerSide,
-    looserId: this.looserId,
-    looserName: this.looserName,
     looserSide: this.looserSide,
     blueScore: this.blueScore,
     redScore: this.redScore,

@@ -74,6 +74,7 @@ const Schema = new mongoose.Schema(
     messageResultId: { type: String, trim: true },
     voiceRedChannelId: { type: String, trim: true },
     voiceBlueChannelId: { type: String, trim: true },
+    matchNotificationMessageIdMap: { type: Map, of: String, default: {} },
   },
   {
     timestamps: true,

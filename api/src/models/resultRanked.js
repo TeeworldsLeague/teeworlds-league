@@ -10,37 +10,41 @@ const PlayerSchema = new mongoose.Schema({
   userName: { type: String, trim: true },
   avatar: { type: String, trim: true },
 
-  score: { type: Number, default: 0 },
-  kills: { type: Number, default: 0 },
-  deaths: { type: Number, default: 0 },
-  flags: { type: Number, default: 0 },
-  flagsTouches: { type: Number, default: 0 },
+  score: { type: Number },
+  kills: { type: Number },
+  deaths: { type: Number },
+  flags: { type: Number },
+  flagsTouches: { type: Number },
 
-  eloBefore: { type: Number, default: 1000 },
-  eloAfter: { type: Number, default: 1000 },
+  eloBefore: { type: Number },
+  eloAfter: { type: Number },
 
   isReady: { type: Boolean, default: false },
+
+  vote: { type: String, enum: ["red", "blue", "cancel", null], default: null },
 });
 
 const Schema = new mongoose.Schema(
   {
     queueId: { type: ObjectId },
-    numberFromQueue: { type: Number, default: 0 },
+    numberFromQueue: { type: Number },
     queueName: { type: String, trim: true },
 
     modeId: { type: ObjectId },
     modeName: { type: String, trim: true },
 
+    state: { type: String, trim: true, enum: ["initial", "created", "ready_up", "in_progress", "completed", "cancelled", "closed"], default: "initial" },
+
     date: { type: Date, default: Date.now },
-    mode: { type: String, trim: true, default: enumModes.twoVTwo },
-    map: { type: String, trim: true, default: enumMaps.ctf_5 },
-    scoreLimit: { type: Number, default: 1000 },
-    timeLimit: { type: Number, default: 0 },
+    mode: { type: String, trim: true },
+    map: { type: String, trim: true },
+    scoreLimit: { type: Number },
+    timeLimit: { type: Number },
     isForfeit: { type: Boolean, default: false },
 
-    totalTimeSeconds: { type: Number, default: 0 },
-    totalTimeMinutes: { type: Number, default: 0 },
-    totalTime: { type: Number, default: 0 },
+    totalTimeSeconds: { type: Number },
+    totalTimeMinutes: { type: Number },
+    totalTime: { type: Number },
 
     winnerId: { type: ObjectId, trim: true },
     winnerName: { type: String, trim: true },
@@ -50,18 +54,18 @@ const Schema = new mongoose.Schema(
     looserName: { type: String, trim: true },
     looserSide: { type: String, trim: true },
 
-    blueScore: { type: Number, default: 0 },
-    redScore: { type: Number, default: 0 },
+    blueScore: { type: Number },
+    redScore: { type: Number },
 
     redPlayers: { type: [PlayerSchema], default: [] },
     bluePlayers: { type: [PlayerSchema], default: [] },
 
-    eloGain: { type: Number, default: 0 },
-    eloLoss: { type: Number, default: 0 },
-    redEloBefore: { type: Number, default: 1000 },
-    blueEloBefore: { type: Number, default: 1000 },
-    redEloGain: { type: Number, default: 0 },
-    blueEloGain: { type: Number, default: 0 },
+    eloGain: { type: Number },
+    eloLoss: { type: Number },
+    redEloBefore: { type: Number },
+    blueEloBefore: { type: Number },
+    redEloGain: { type: Number },
+    blueEloGain: { type: Number },
 
     freezed: { type: Boolean, default: false },
     freezedAt: { type: Date },
@@ -72,9 +76,9 @@ const Schema = new mongoose.Schema(
     textChannelDisplayFinalResultId: { type: String, trim: true },
     textChannelDisplayResultId: { type: String, trim: true },
     messageResultId: { type: String, trim: true },
-    readyButtonId: { type: String, trim: true },
     voiceRedChannelId: { type: String, trim: true },
     voiceBlueChannelId: { type: String, trim: true },
+    playerNotificationMessageIdMap: { type: Map, of: String, default: {} },
   },
   {
     timestamps: true,

@@ -113,7 +113,8 @@ const deleteResultRanked = async ({ resultRanked }) => {
   if (!resDeleteVoiceBlueChannel.ok) return resDeleteVoiceBlueChannel;
   resultRanked.voiceBlueChannelId = null;
 
-  discordService.unregisterButtonCallback(resultRanked.readyButtonId);
+  const readyButtonId = `${resultRanked._id}_ready`; // TODO: Create enum for the buttons
+  discordService.unregisterButtonCallback(readyButtonId);
 
   return { ok: true };
 };
@@ -307,7 +308,7 @@ const registerLeaveButtonCallback = async ({ queue }) => {
 };
 
 const registerReadyButtonCallback = async ({ resultRanked }) => {
-  const readyButtonId = resultRanked.readyButtonId;
+  const readyButtonId = `${resultRanked._id}_ready`;
   discordService.registerButtonCallback(readyButtonId, async (interaction) => {
     const resultRankedId = interaction.customId.split("_")[0];
     const resultRanked = await ResultRankedModel.findById(resultRankedId);

@@ -325,7 +325,6 @@ const generateResultRankedMessageNotReady = async ({ resultRanked }) => {
   const readyButton = await discordService.createButton({ customId: readyButtonId, label: "Ready", style: ButtonStyle.Success });
   const allPlayers = [...resultRanked.redPlayers, ...resultRanked.bluePlayers];
 
-  resultRanked.readyButtonId = readyButtonId;
   await resultRanked.save();
 
   discordService.registerButtonCallback(readyButtonId, async (interaction) => {

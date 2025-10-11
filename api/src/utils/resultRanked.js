@@ -4,6 +4,7 @@ const StatRankedModel = require("../models/statRanked");
 const ModeModel = require("../models/mode");
 const { computeElo } = require(".");
 const { detectMapFromServer } = require("./map");
+const discordService = require("../services/discordService");
 
 /*
 {

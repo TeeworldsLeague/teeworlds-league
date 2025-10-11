@@ -2,7 +2,7 @@ const UserModel = require("../models/user");
 const ResultRankedModel = require("../models/resultRanked");
 const StatRankedModel = require("../models/statRanked");
 const discordService = require("../services/discordService");
-const { discordMessageResultRankedNotReady } = require("./discordMessages");
+const { discordMessageResultRankedNotReady, discordPrivateMessageNewQueue } = require("./discordMessages");
 
 const createGameFromQueue = async ({ queue }) => {
   const players = queue.players;
@@ -118,6 +118,16 @@ const createGameFromQueue = async ({ queue }) => {
     ...discordMessage,
   });
   newResultRanked.messageReadyId = resSendMessageReady.data.message.id;
+
+  for (const player of newResultRanked.redPlayers) {
+    const user = await UserModel.findOne({ userName: player.userName });
+    if (!user) continue;
+    const discordPrivateMessage = discordPrivateMessageNewQueue({ resultRanked: newResultRanked });
+    await discordService.sendMessage({
+      channelId: user.discordId,
+      ...discordPrivateMessage,
+    });
+  }
 
   await newResultRanked.save();
 

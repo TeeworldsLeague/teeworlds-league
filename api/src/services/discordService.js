@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ChannelType, Events, ActionRowBuilder, ButtonBuilder } = require("discord.js");
+const { Client, GatewayIntentBits, ChannelType, Events, ActionRowBuilder, ButtonBuilder, MessageFlags } = require("discord.js");
 const { DISCORD_CLIENT_ID, DISCORD_BOT_TOKEN } = require("../config");
 const enumErrorCode = require("../enums/enumErrorCode");
 
@@ -38,13 +38,13 @@ class DiscordService {
           } catch (error) {
             console.error(`Error handling button interaction ${interaction.customId}:`, error);
             if (!interaction.replied && !interaction.deferred) {
-              await interaction.reply({ content: "An error occurred while processing your request.", ephemeral: true });
+              await interaction.reply({ content: "An error occurred while processing your request.", flags: [MessageFlags.Ephemeral] });
             }
           }
         } else {
           console.warn(`No callback found for button: ${interaction.customId}`);
           if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: "This button is not configured.", ephemeral: true });
+            await interaction.reply({ content: "This button is not configured.", flags: [MessageFlags.Ephemeral] });
           }
         }
       });

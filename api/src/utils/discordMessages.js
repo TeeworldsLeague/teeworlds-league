@@ -62,8 +62,8 @@ const discordMessageResultRanked = ({ resultRanked }) => {
   const winner = resultRanked.winnerName;
   const winnerColor = resultRanked.winnerSide === "red" ? 0xff0000 : 0x0000ff;
 
-  const redPlayersFormatted = redPlayers.map(formatPlayerWithStats).join("\n");
-  const bluePlayersFormatted = bluePlayers.map(formatPlayerWithStats).join("\n");
+  const redPlayersFormatted = redPlayers.map((player) => formatPlayerWithStats({ player, resultRanked })).join("\n");
+  const bluePlayersFormatted = bluePlayers.map((player) => formatPlayerWithStats({ player, resultRanked })).join("\n");
 
   const embed = new EmbedBuilder()
     .setTitle(resultRanked.freezed ? "🏆 Match Completed 🏆" : "🏆 Match In Progress 🏆")
@@ -154,6 +154,23 @@ const discordMessageResultRankedNotReady = async ({ resultRanked }) => {
   };
 };
 
+const discordPrivateMessageNewQueue = async ({ resultRanked }) => {
+  const embed = new EmbedBuilder()
+    .setTitle("New game found!")
+    .setDescription(`A new game has been found: ${resultRanked.queueName}`)
+    .setColor(0x0099ff)
+    .addFields({
+      name: "📢 Join the game channel",
+      value: `Click [here](https://discord.com/channels/${resultRanked.guildId}/${resultRanked.textChannelDisplayResultId}) to get ready!`,
+      inline: false,
+    })
+    .setTimestamp();
+
+  return {
+    embed: embed,
+  };
+};
+
 const getGameStatus = ({ resultRanked }) => {
   if (resultRanked.freezed) {
     return "Match Completed 🏆";
@@ -168,9 +185,9 @@ const formatPlayers = (players) => {
   return players.map((player) => `• ${player.userName}`).join("\n") || "• No players";
 };
 
-const formatPlayerWithStats = (player) => {
+const formatPlayerWithStats = ({ player, resultRanked }) => {
   if (resultRanked.freezed) {
-    const stats = `**${player.score}** pts | ${player.kills}K/${player.deaths}D | ${player.flags} flags`;
+    const stats = `**${player.score}** pts | ${player.kills / player.deaths} K/D | ${player.flags} flags`;
     return `• **${player.userName}**\n  ${stats}`;
   }
   return `• ${player.userName}`;
@@ -264,7 +281,7 @@ const readyButtonCallBack = async (interaction) => {
     const resReady = await ready({ resultRanked, user });
     if (!resReady.ok) return { ok: false, message: "Player not in result ranked" };
 
-    await interaction.reply({ content: `You have been marked as ready!`, ephemeral: true });
+    await interaction.reply({ content: `You have been marked as ready!`, flags: [MessageFlags.Ephemeral] });
 
     if (arePlayersReady({ resultRanked })) {
       discordService.deleteMessage({ channelId: resultRanked.textChannelDisplayResultId, messageId: resultRanked.messageReadyId });
@@ -289,6 +306,7 @@ const readyButtonCallBack = async (interaction) => {
 module.exports = {
   // Queue
   discordMessageQueue,
+  discordPrivateMessageNewQueue,
 
   // Result Ranked
   discordMessageResultRanked,

@@ -5,8 +5,13 @@ const enumUserRole = require("../enums/enumUserRole");
 const UserModel = require("../models/user");
 const ResultRankedModel = require("../models/resultRanked");
 const { catchErrors, parseDiscordMessage } = require("../utils");
-const { forfeitResultRanked, unforfeitResultRanked, updateAllStatsResultRanked, updateStatResultRanked } = require("../utils/resultRanked");
-const { deleteResultRanked } = require("../utils/discord");
+const {
+  forfeitResultRanked,
+  unforfeitResultRanked,
+  updateAllStatsResultRanked,
+  updateStatResultRanked,
+  deleteResultRankedDiscordMessage,
+} = require("../utils/resultRanked");
 
 router.get(
   "/:id",
@@ -237,7 +242,7 @@ router.delete(
     if (!resultRanked) return res.status(400).send({ ok: false, message: "Result not found" });
     if (resultRanked.freezed) return res.status(400).send({ ok: false, message: "Result already frozen" });
 
-    const resDeleteResultRanked = await deleteResultRanked({ resultRanked });
+    const resDeleteResultRanked = await deleteResultRankedDiscordMessage({ resultRanked });
     if (!resDeleteResultRanked.ok) return res.status(500).send(resDeleteResultRanked);
 
     await resultRanked.deleteOne();

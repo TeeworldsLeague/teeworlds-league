@@ -152,10 +152,6 @@ class DiscordService {
     }
   }
 
-  async createButton({ customId, label, style }) {
-    return new ButtonBuilder().setCustomId(customId).setLabel(label).setStyle(style);
-  }
-
   async sendMessage({ channelId, message, buttons = null, embed = null }) {
     try {
       const channel = await this.client.channels.fetch(channelId);

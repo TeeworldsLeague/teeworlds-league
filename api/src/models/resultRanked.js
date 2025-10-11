@@ -71,6 +71,7 @@ const Schema = new mongoose.Schema(
     categoryQueueId: { type: String, trim: true },
     textChannelDisplayFinalResultId: { type: String, trim: true },
     textChannelDisplayResultId: { type: String, trim: true },
+    messageReadyId: { type: String, trim: true },
     messageResultId: { type: String, trim: true },
     readyButtonId: { type: String, trim: true },
     voiceRedChannelId: { type: String, trim: true },

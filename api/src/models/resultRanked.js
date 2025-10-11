@@ -10,6 +10,8 @@ const PlayerSchema = new mongoose.Schema({
   userName: { type: String, trim: true },
   avatar: { type: String, trim: true },
 
+  discordId: { type: String, trim: true },
+
   score: { type: Number, default: 0 },
   kills: { type: Number, default: 0 },
   deaths: { type: Number, default: 0 },

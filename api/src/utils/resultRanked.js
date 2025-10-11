@@ -569,6 +569,7 @@ const join = async ({ queue, user }) => {
     avatar: user.avatar,
     clanId: user.clanId,
     clanName: user.clanName,
+    discordId: user.discordId,
     elo: user.elo,
     joinedAt: new Date(),
   };

@@ -112,7 +112,6 @@ const discordMessageResultRanked = ({ resultRanked }) => {
 
   return {
     embed: embed,
-    message: resultRanked.freezed ? "Match completed!" : "New queue started!",
   };
 };
 
@@ -149,7 +148,6 @@ const discordMessageResultRankedNotReady = async ({ resultRanked }) => {
 
   return {
     embed: embed,
-    message: "Players are not ready!",
     buttons: [readyButton],
   };
 };
@@ -207,6 +205,11 @@ const joinQueueButtonCallBack = async (interaction) => {
 
     const user = await UserModel.findOne({ userName: interaction.member.displayName });
     if (!user) return { ok: false, message: "User not found" };
+
+    if (!user.discordId) {
+      user.discordId = interaction.member.id;
+      await user.save();
+    }
 
     const resJoin = await join({ queue, user });
     if (!resJoin.ok) {

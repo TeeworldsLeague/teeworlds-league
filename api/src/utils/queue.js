@@ -32,6 +32,7 @@ const createGameFromQueue = async ({ queue }) => {
         userName: player.userName,
         avatar: player.avatar,
         eloBefore: statRanked.elo,
+        discordId: player.discordId,
       };
     }),
   );
@@ -54,6 +55,7 @@ const createGameFromQueue = async ({ queue }) => {
         userName: player.userName,
         avatar: player.avatar,
         eloBefore: statRanked.elo,
+        discordId: player.discordId,
       };
     }),
   );
@@ -92,7 +94,7 @@ const createGameFromQueue = async ({ queue }) => {
   const resUpdateMessageQueue = await discordService.updateMessage({
     channelId: queue.textChannelDisplayQueueId,
     messageId: queue.messageQueueId,
-    ...discordMessageQueue({ queue }),
+    ...(await discordMessageQueue({ queue })),
   });
   if (!resUpdateMessageQueue.ok) return { ok: false, message: "Failed to update message queue" };
 

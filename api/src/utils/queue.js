@@ -128,12 +128,19 @@ const createGameFromQueue = async ({ queue }) => {
   });
   newResultRanked.messageReadyId = resSendMessageReady.data.message.id;
 
-  for (const player of newResultRanked.redPlayers) {
-    const user = await UserModel.findOne({ userName: player.userName });
-    if (!user) continue;
+  for (const player of redRealPlayers) {
+    if (!player.discordId) continue;
     const discordPrivateMessage = discordPrivateMessageNewQueue({ resultRanked: newResultRanked });
-    await discordService.sendMessage({
-      channelId: user.discordId,
+    await discordService.sendPrivateMessage({
+      userId: player.discordId,
+      ...discordPrivateMessage,
+    });
+  }
+  for (const player of blueRealPlayers) {
+    if (!player.discordId) continue;
+    const discordPrivateMessage = discordPrivateMessageNewQueue({ resultRanked: newResultRanked });
+    await discordService.sendPrivateMessage({
+      userId: player.discordId,
       ...discordPrivateMessage,
     });
   }

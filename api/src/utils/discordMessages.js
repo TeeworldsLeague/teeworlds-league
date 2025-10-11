@@ -152,20 +152,20 @@ const discordMessageResultRankedNotReady = async ({ resultRanked }) => {
   };
 };
 
-const discordPrivateMessageNewQueue = async ({ resultRanked }) => {
+const discordPrivateMessageNewQueue = ({ resultRanked }) => {
   const embed = new EmbedBuilder()
-    .setTitle("New game found!")
-    .setDescription(`A new game has been found: ${resultRanked.queueName}`)
+    .setTitle("Game found : " + resultRanked.queueName)
     .setColor(0x0099ff)
     .addFields({
       name: "📢 Join the game channel",
-      value: `Click [here](https://discord.com/channels/${resultRanked.guildId}/${resultRanked.textChannelDisplayResultId}) to get ready!`,
+      value: `[Game channel to get ready !](https://discord.com/channels/${resultRanked.guildId}/${resultRanked.textChannelDisplayResultId}`,
       inline: false,
     })
     .setTimestamp();
 
   return {
     embed: embed,
+    message: "New game found!",
   };
 };
 
@@ -206,11 +206,6 @@ const joinQueueButtonCallBack = async (interaction) => {
     const user = await UserModel.findOne({ userName: interaction.member.displayName });
     if (!user) return { ok: false, message: "User not found" };
 
-    if (!user.discordId) {
-      user.discordId = interaction.member.id;
-      await user.save();
-    }
-
     const resJoin = await join({ queue, user });
     if (!resJoin.ok) {
       await interaction.reply({
@@ -226,6 +221,20 @@ const joinQueueButtonCallBack = async (interaction) => {
       content: `You have been added to the queue!`,
       flags: [MessageFlags.Ephemeral],
     });
+
+    if (!user.discordId) {
+      user.discordId = interaction.member.id;
+
+      const resCreateChannel = await discordService.createPrivateMessageChannel({ userId: user.discordId });
+      if (!resCreateChannel.ok) return { ok: false, message: "Failed to create private message channel" };
+
+      await discordService.sendPrivateMessage({
+        userId: user.discordId,
+        message: "Welcome ! Your discord has been successfully linked to your account. Hf !",
+      });
+
+      await user.save();
+    }
 
     const discordMessage = await discordMessageQueue({ queue });
     await discordService.updateMessage({

@@ -152,6 +152,46 @@ class DiscordService {
     }
   }
 
+  async createPrivateMessageChannel({ userId }) {
+    try {
+      const user = await this.client.users.fetch(userId);
+      await user.createDM();
+
+      return { ok: true };
+    } catch (error) {
+      console.error(`Failed to create private message channel ${userId}:`, error);
+      return { ok: false, errorCode: enumErrorCode.SERVER_ERROR };
+    }
+  }
+
+  async sendPrivateMessage({ userId, message, buttons = null, embed = null }) {
+    try {
+      const user = await this.client.users.fetch(userId);
+      await user.send(message);
+
+      const messageOptions = {
+        content: message,
+      };
+
+      if (buttons && buttons.length > 0) {
+        const actionBuilder = new ActionRowBuilder();
+        actionBuilder.addComponents(buttons);
+        messageOptions.components = [actionBuilder];
+      }
+
+      if (embed) {
+        messageOptions.embeds = [embed];
+      }
+
+      const sentMessage = await user.send(messageOptions);
+
+      return { ok: true, data: { message: sentMessage } };
+    } catch (error) {
+      console.error(`Failed to send private message to ${userId}:`, error);
+      return { ok: false, errorCode: enumErrorCode.SERVER_ERROR };
+    }
+  }
+
   async sendMessage({ channelId, message, buttons = null, embed = null }) {
     try {
       const channel = await this.client.channels.fetch(channelId);

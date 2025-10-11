@@ -203,10 +203,10 @@ async function updateStatResultRanked(resultRanked) {
     resultRanked.looserName = "Red";
     resultRanked.looserSide = "red";
   } else {
-    resultRanked.winnerName = null;
+    resultRanked.winnerName = "Equality";
     resultRanked.winnerSide = null;
 
-    resultRanked.looserName = null;
+    resultRanked.looserName = "Equality";
     resultRanked.looserSide = null;
   }
 

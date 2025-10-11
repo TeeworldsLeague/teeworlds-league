@@ -187,7 +187,7 @@ const formatPlayers = (players) => {
 
 const formatPlayerWithStats = ({ player, resultRanked }) => {
   if (resultRanked.freezed) {
-    const stats = `**${player.score}** pts | ${player.kills / player.deaths} K/D | ${player.flags} flags`;
+    const stats = `**${player.score}** pts | ${Math.round(player.kills / player.deaths, 2)} K/D | ${player.flags} flags`;
     return `• **${player.userName}**\n  ${stats}`;
   }
   return `• ${player.userName}`;

@@ -2,7 +2,7 @@ const UserModel = require("../models/user");
 const ResultRankedModel = require("../models/resultRanked");
 const StatRankedModel = require("../models/statRanked");
 const discordService = require("../services/discordService");
-const { discordMessageResultRankedNotReady, discordPrivateMessageNewQueue } = require("./discordMessages");
+const { discordMessageResultRankedNotReady, discordPrivateMessageNewQueue, discordMessageQueue } = require("./discordMessages");
 
 const createGameFromQueue = async ({ queue }) => {
   const players = queue.players;
@@ -88,6 +88,13 @@ const createGameFromQueue = async ({ queue }) => {
 
   queue.numberOfGames++;
   await queue.save();
+
+  const resUpdateMessageQueue = await discordService.updateMessage({
+    channelId: queue.textChannelDisplayQueueId,
+    messageId: queue.messageQueueId,
+    ...discordMessageQueue({ queue }),
+  });
+  if (!resUpdateMessageQueue.ok) return { ok: false, message: "Failed to update message queue" };
 
   const resCreateTextChannelDisplayResults = await discordService.createTextChannel({
     guildId: newResultRanked.guildId,

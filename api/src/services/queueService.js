@@ -214,70 +214,72 @@ class QueueService {
   }
 
   async createGameFromQueue({ queue }) {
-    const players = queue.players;
-    if (players.length < queue.numberOfPlayersForGame) return { ok: false, message: "Not enough players in queue" };
+    return await this.mutex.runExclusive(async () => {
+      const players = queue.players;
+      if (players.length < queue.numberOfPlayersForGame) return { ok: false, message: "Not enough players in queue" };
 
-    const { bluePlayers, redPlayers } = this.choosePlayers(queue);
+      const { bluePlayers, redPlayers } = this.choosePlayers(queue);
 
-    const allPlayers = [...bluePlayers, ...redPlayers];
-    const allRealPlayers = await UserModel.find({ _id: { $in: allPlayers.map((player) => player.userId) } });
+      const allPlayers = [...bluePlayers, ...redPlayers];
+      const allRealPlayers = await UserModel.find({ _id: { $in: allPlayers.map((player) => player.userId) } });
 
-    const allPlayersObj = await Promise.all(
-      allRealPlayers.map(async (player) => {
-        let statRanked = await StatRankedModel.findOne({ userId: player._id, modeId: queue.modeId });
+      const allPlayersObj = await Promise.all(
+        allRealPlayers.map(async (player) => {
+          let statRanked = await StatRankedModel.findOne({ userId: player._id, modeId: queue.modeId });
 
-        if (!statRanked) {
-          statRanked = await StatRankedModel.create({
+          if (!statRanked) {
+            statRanked = await StatRankedModel.create({
+              userId: player._id,
+              elo: player.elo,
+
+              modeId: queue.modeId,
+              modeName: queue.modeName,
+            });
+          }
+
+          return {
             userId: player._id,
-            elo: player.elo,
+            userName: player.userName,
+            avatar: player.avatar,
+            eloBefore: statRanked.elo,
+            discordId: player.discordId,
+          };
+        }),
+      );
 
-            modeId: queue.modeId,
-            modeName: queue.modeName,
-          });
-        }
+      const bluePlayerIds = new Set(bluePlayers.map((p) => p.userId.toString()));
+      const bluePlayersObj = allPlayersObj.filter((p) => bluePlayerIds.has(p.userId.toString()));
+      const redPlayersObj = allPlayersObj.filter((p) => !bluePlayerIds.has(p.userId.toString()));
 
-        return {
-          userId: player._id,
-          userName: player.userName,
-          avatar: player.avatar,
-          eloBefore: statRanked.elo,
-          discordId: player.discordId,
-        };
-      }),
-    );
+      // Create the result ranked match
+      const map = randomElement(queue.maps);
+      const resCreateResultRanked = await resultRankedService.createResultRanked({
+        queue,
+        bluePlayersObj,
+        redPlayersObj,
+        map,
+      });
+      if (!resCreateResultRanked.ok) return resCreateResultRanked;
 
-    const bluePlayerIds = new Set(bluePlayers.map((p) => p.userId.toString()));
-    const bluePlayersObj = allPlayersObj.filter((p) => bluePlayerIds.has(p.userId.toString()));
-    const redPlayersObj = allPlayersObj.filter((p) => !bluePlayerIds.has(p.userId.toString()));
+      const newResultRanked = resCreateResultRanked.data;
 
-    // Create the result ranked match
-    const map = randomElement(queue.maps);
-    const resCreateResultRanked = await resultRankedService.createResultRanked({
-      queue,
-      bluePlayersObj,
-      redPlayersObj,
-      map,
+      // Remove selected players from queue
+      const selectedPlayerIds = new Set(allPlayersObj.map((p) => p.userId.toString()));
+      queue.players = queue.players.filter((playerQueue) => !selectedPlayerIds.has(playerQueue.userId.toString()));
+
+      queue.numberOfGames++;
+      await queue.save();
+
+      // Update queue message
+      const resUpdateMessageQueue = await discordService.updateMessage({
+        channelId: queue.textChannelDisplayQueueId,
+        messageId: queue.messageQueueId,
+        ...(await discordMessageQueue({ queue })),
+      });
+      if (!resUpdateMessageQueue.ok) return { ok: false, message: "Failed to update message queue" };
+
+      return { ok: true, data: { newResultRanked, queue } };
     });
-    if (!resCreateResultRanked.ok) return resCreateResultRanked;
-
-    const newResultRanked = resCreateResultRanked.data;
-
-    // Remove selected players from queue
-    const selectedPlayerIds = new Set(allPlayersObj.map((p) => p.userId.toString()));
-    queue.players = queue.players.filter((playerQueue) => !selectedPlayerIds.has(playerQueue.userId.toString()));
-
-    queue.numberOfGames++;
-    await queue.save();
-
-    // Update queue message
-    const resUpdateMessageQueue = await discordService.updateMessage({
-      channelId: queue.textChannelDisplayQueueId,
-      messageId: queue.messageQueueId,
-      ...(await discordMessageQueue({ queue })),
-    });
-    if (!resUpdateMessageQueue.ok) return { ok: false, message: "Failed to update message queue" };
-
-    return { ok: true, data: { newResultRanked, queue } };
   }
 
   choosePlayers(queue) {

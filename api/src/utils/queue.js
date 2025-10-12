@@ -157,6 +157,8 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
 
 const createGameFromQueue = async ({ queue }) => { // TODO: how long does this function need to create a game?
   return await runExclusiveWithId(queue._id.toString(), async () => {
+    const queue = await QueueModel.findById(queue._id); // refetch the queue to be sure it's up to date
+    if (!queue) return { ok: false, message: "Queue not found" };
     return await createGameFromQueueWithoutLock({ queue });
   });
 };

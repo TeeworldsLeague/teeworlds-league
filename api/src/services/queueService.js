@@ -1,29 +1,92 @@
 const { Mutex } = require("../utils/mutex");
 const { randomElement } = require("../utils/random");
 const discordService = require("./discordService");
+const resultRankedService = require("./resultRankedService");
 const QueueModel = require("../models/queue");
-const ResultRankedModel = require("../models/resultRanked");
 const UserModel = require("../models/user");
 const StatRankedModel = require("../models/statRanked");
 const {
   join: joinUtil,
-  leave: leaveUtil,
+  leave: leaveUtil, ready, arePlayersReady, voteCancel, arePlayersVotedCancel,
 } = require("../utils/resultRanked");
 const {
   discordMessageQueue,
-  discordMessageResultRankedNotReady,
-  discordPrivateMessageNewQueue,
-  joinQueueButtonCallBack,
-  leaveQueueButtonCallBack,
-  readyButtonCallBack,
-  cancelResultRankedButtonCallBack,
-  voteRedResultRankedButtonCallBack,
-  voteBlueResultRankedButtonCallBack,
 } = require("../utils/discordMessages");
+const ResultRankedModel = require("../models/resultRanked");
+const { MessageFlags } = require("discord.js");
+
+
+const joinQueueButtonCallBack = async (interaction) => {
+  try {
+    const queueId = interaction.customId.split("_")[0];
+    const queue = await QueueModel.findById(queueId);
+    if (!queue) return { ok: false, message: "Queue not found" };
+
+    const user = await UserModel.findOne({ userName: interaction.member.displayName });
+    if (!user) return { ok: false, message: "User not found" };
+
+    const resJoin = await queueService.join({ queue, user });
+    if (!resJoin.ok) {
+      await interaction.reply({
+        content: resJoin.message || "You are already in the queue!",
+        flags: [MessageFlags.Ephemeral],
+      });
+      return;
+    }
+
+    await interaction.reply({
+      content: `You have been added to the queue!`,
+      flags: [MessageFlags.Ephemeral],
+    });
+
+    if (!user.discordId) {
+      user.discordId = interaction.member.id;
+
+      const resCreateChannel = await discordService.createPrivateMessageChannel({ userId: user.discordId });
+      if (!resCreateChannel.ok) return { ok: false, message: "Failed to create private message channel" };
+
+      await discordService.sendPrivateMessage({
+        userId: user.discordId,
+        message: "Welcome ! Your discord has been successfully linked to your account. Hf !",
+      });
+
+      await user.save();
+    }
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const leaveQueueButtonCallBack = async (interaction) => {
+  try {
+    const queueId = interaction.customId.split("_")[0];
+    const queue = await QueueModel.findById(queueId);
+    if (!queue) return { ok: false, message: "Queue not found" };
+
+    const user = await UserModel.findOne({ userName: interaction.member.displayName });
+    if (!user) return { ok: false, message: "User not found" };
+
+    const resLeave = await queueService.leave({ queue, user });
+    if (!resLeave.ok) {
+      await interaction.reply({
+        content: resLeave.message || "You are not in the queue!",
+        flags: [MessageFlags.Ephemeral],
+      });
+      return;
+    }
+
+    await interaction.reply({
+      content: `You left the queue!`,
+      flags: [MessageFlags.Ephemeral],
+    });
+  } catch (error) {
+    console.error(error);
+  }
+};
 
 class QueueService {
   constructor() {
-    this.queueMutex = new Mutex();
+    this.mutex = new Mutex();
   }
 
   async createNewQueue({ queue }) {
@@ -115,7 +178,7 @@ class QueueService {
   }
 
   async join({ queue, user }) {
-    return await this.queueMutex.runExclusive(async () => {
+    return await this.mutex.runExclusive(async () => {
       const resJoin = await joinUtil({ queue, user });
       if (!resJoin.ok) return resJoin;
 
@@ -133,7 +196,7 @@ class QueueService {
   }
 
   async leave({ queue, user }) {
-    return await this.queueMutex.runExclusive(async () => {
+    return await this.mutex.runExclusive(async () => {
       const resLeave = await leaveUtil({ queue, user });
       if (!resLeave.ok) return resLeave;
 
@@ -187,80 +250,32 @@ class QueueService {
     const bluePlayersObj = allPlayersObj.filter((p) => bluePlayerIds.has(p.userId.toString()));
     const redPlayersObj = allPlayersObj.filter((p) => !bluePlayerIds.has(p.userId.toString()));
 
-    const newResultRankedObj = {
-      queueId: queue._id,
-      numberFromQueue: queue.numberOfGames,
-      queueName: queue.name,
+    // Create the result ranked match
+    const map = randomElement(queue.maps);
+    const resCreateResultRanked = await resultRankedService.createResultRanked({
+      queue,
+      bluePlayersObj,
+      redPlayersObj,
+      map,
+    });
+    if (!resCreateResultRanked.ok) return resCreateResultRanked;
 
-      modeId: queue.modeId,
-      modeName: queue.modeName,
+    const newResultRanked = resCreateResultRanked.data;
 
-      bluePlayers: bluePlayersObj,
-      redPlayers: redPlayersObj,
-
-      mode: queue.mode,
-      map: randomElement(queue.maps),
-
-      guildId: queue.guildId,
-      categoryQueueId: queue.categoryQueueId,
-      textChannelDisplayFinalResultId: queue.textChannelDisplayResultsId,
-    };
-
-    const newResultRanked = await ResultRankedModel.create(newResultRankedObj);
-
+    // Remove selected players from queue
     const selectedPlayerIds = new Set(allPlayersObj.map((p) => p.userId.toString()));
     queue.players = queue.players.filter((playerQueue) => !selectedPlayerIds.has(playerQueue.userId.toString()));
 
     queue.numberOfGames++;
     await queue.save();
 
+    // Update queue message
     const resUpdateMessageQueue = await discordService.updateMessage({
       channelId: queue.textChannelDisplayQueueId,
       messageId: queue.messageQueueId,
       ...(await discordMessageQueue({ queue })),
     });
     if (!resUpdateMessageQueue.ok) return { ok: false, message: "Failed to update message queue" };
-
-    const resCreateTextChannelDisplayResults = await discordService.createTextChannel({
-      guildId: newResultRanked.guildId,
-      name: "queue_" + newResultRanked.id.toString(),
-      categoryId: newResultRanked.categoryQueueId,
-    });
-    newResultRanked.textChannelDisplayResultId = resCreateTextChannelDisplayResults.data.channel.id;
-
-    const resCreateVoiceRedChannel = await discordService.createVoiceChannel({
-      guildId: newResultRanked.guildId,
-      name: "red_" + newResultRanked.id.toString(),
-      categoryId: newResultRanked.categoryQueueId,
-    });
-    if (!resCreateVoiceRedChannel.ok) return { ok: false, message: "Failed to create voice channel" };
-    newResultRanked.voiceRedChannelId = resCreateVoiceRedChannel.data.channel.id;
-
-    const resCreateVoiceBlueChannel = await discordService.createVoiceChannel({
-      guildId: newResultRanked.guildId,
-      name: "blue_" + newResultRanked.id.toString(),
-      categoryId: newResultRanked.categoryQueueId,
-    });
-    if (!resCreateVoiceBlueChannel.ok) return { ok: false, message: "Failed to create voice channel" };
-    newResultRanked.voiceBlueChannelId = resCreateVoiceBlueChannel.data.channel.id;
-
-    const discordMessage = await discordMessageResultRankedNotReady({ resultRanked: newResultRanked });
-    const resSendMessageReady = await discordService.sendMessage({
-      channelId: newResultRanked.textChannelDisplayResultId,
-      ...discordMessage,
-    });
-    newResultRanked.messageReadyId = resSendMessageReady.data.message.id;
-
-    for (const player of allRealPlayers) {
-      if (!player.discordId) continue;
-      const discordPrivateMessage = discordPrivateMessageNewQueue({ resultRanked: newResultRanked });
-      await discordService.sendPrivateMessage({
-        userId: player.discordId,
-        ...discordPrivateMessage,
-      });
-    }
-
-    await newResultRanked.save();
 
     return { ok: true, data: { newResultRanked, queue } };
   }
@@ -284,14 +299,6 @@ class QueueService {
     for (const queue of queues) {
       if (queue.joinButtonId) discordService.registerButtonCallback(queue.joinButtonId, joinQueueButtonCallBack);
       if (queue.leaveButtonId) discordService.registerButtonCallback(queue.leaveButtonId, leaveQueueButtonCallBack);
-    }
-
-    const resultRankeds = await ResultRankedModel.find({ freezed: false });
-    for (const resultRanked of resultRankeds) {
-      if (resultRanked.readyButtonId) discordService.registerButtonCallback(resultRanked.readyButtonId, readyButtonCallBack);
-      if (resultRanked.voteCancelButtonId) discordService.registerButtonCallback(resultRanked.voteCancelButtonId, cancelResultRankedButtonCallBack);
-      if (resultRanked.voteRedButtonId) discordService.registerButtonCallback(resultRanked.voteRedButtonId, voteRedResultRankedButtonCallBack);
-      if (resultRanked.voteBlueButtonId) discordService.registerButtonCallback(resultRanked.voteBlueButtonId, voteBlueResultRankedButtonCallBack);
     }
 
     console.log("Callbacks for queues initialized");

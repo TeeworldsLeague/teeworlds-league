@@ -10,7 +10,7 @@ const { enumNumberOfPlayersPerTeam, enumNumberOfPlayersForGame, enumModes } = re
 const discordService = require("../services/discordService");
 const { join, leave } = require("../utils/resultRanked");
 const { discordMessageQueue, discordMessageClassement } = require("../utils/discordMessages");
-const { runExclusiveWithId } = require('../utils/mutex');
+const { runExclusiveWithId, freeMutexWithId } = require('../utils/mutex');
 const createNewQueue = async ({ queue }) => {
   const resCreateCategoryQueue = await discordService.createCategory({ guildId: queue.guildId, name: queue.name });
   if (!resCreateCategoryQueue.ok) return resCreateCategoryQueue;
@@ -111,6 +111,8 @@ const deleteQueue = async ({ queue }) => {
 
   discordService.unregisterButtonCallback(queue.joinButtonId);
   discordService.unregisterButtonCallback(queue.leaveButtonId);
+
+  await freeMutexWithId(queue._id.toString());
 
   queue.joinButtonId = null;
   queue.leaveButtonId = null;

@@ -1,4 +1,5 @@
 const { Mutex } = require("../utils/mutex");
+const { randomElement } = require("../utils/random");
 const discordService = require("./discordService");
 const QueueModel = require("../models/queue");
 const ResultRankedModel = require("../models/resultRanked");
@@ -217,7 +218,7 @@ class QueueService {
       redPlayers: redPlayersObj,
 
       mode: queue.mode,
-      map: this.chooseMap(queue),
+      map: randomElement(queue.maps),
 
       guildId: queue.guildId,
       categoryQueueId: queue.categoryQueueId,
@@ -293,10 +294,6 @@ class QueueService {
     await newResultRanked.save();
 
     return { ok: true, data: { newResultRanked, queue } };
-  }
-
-  chooseMap(queue) {
-    return queue.maps[(Math.random() * queue.maps.length) | 0];
   }
 
   choosePlayers(queue) {

@@ -1,11 +1,11 @@
 const QueueModel = require("../models/queue");
-const { createGameFromQueue } = require("../utils/queue");
+const queueService = require("../services/queueService");
 
 const createGamesFromQueue = async () => {
   const queues = await QueueModel.find({});
 
   for (const queue of queues) {
-    const resCreateGameFromQueue = await createGameFromQueue({ queue });
+    const resCreateGameFromQueue = await queueService.createGameFromQueue({ queue });
     if (!resCreateGameFromQueue.ok) continue;
   }
 };

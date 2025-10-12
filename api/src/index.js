@@ -8,6 +8,7 @@ const fs = require("fs");
 const initCron = require("./cron/intCron");
 const DiscordService = require("./services/discordService");
 const queueService = require("./services/queueService");
+const resultRankedService = require("./services/resultRankedService");
 
 const { PORT, SENTRY_DSN, ENVIRONMENT, APP_URL } = require("./config");
 const app = express();
@@ -66,4 +67,22 @@ if (ENVIRONMENT === "production") {
 initCron();
 DiscordService.init().then(async () => {
   await queueService.onStartup();
+  await resultRankedService.onStartup();
+});
+
+
+async function shutdown() {
+    console.log('Shutting down server...');
+    await queueService.onShutdown();
+    await resultRankedService.onShutdown();
+}
+
+process.on('SIGINT', async () => {
+  console.log('Received SIGINT, shutting down gracefully...');
+  await shutdown();
+});
+
+process.on('SIGTERM', async () => {
+  console.log('Received SIGTERM, shutting down gracefully...');
+  await shutdown();
 });

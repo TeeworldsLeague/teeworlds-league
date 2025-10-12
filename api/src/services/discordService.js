@@ -2,6 +2,8 @@ const { Client, GatewayIntentBits, ChannelType, Events, ActionRowBuilder, Button
 const { DISCORD_CLIENT_ID, DISCORD_BOT_TOKEN } = require("../config");
 const enumErrorCode = require("../enums/enumErrorCode");
 
+const { runWithQueueLock } = require('../utils/queue');
+
 class DiscordService {
   constructor() {
     this.client = null;
@@ -34,7 +36,7 @@ class DiscordService {
         const callback = this.buttonCallbacks.get(interaction.customId);
         if (callback) {
           try {
-            await callback(interaction);
+            runWithQueueLock( async () => { callback(interaction) }); // TODO: we later probably want to introduce different locks for different queues and not a global one!
           } catch (error) {
             console.error(`Error handling button interaction ${interaction.customId}:`, error);
             if (!interaction.replied && !interaction.deferred) {

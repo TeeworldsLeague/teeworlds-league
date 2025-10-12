@@ -9,11 +9,11 @@ const { Mutex } = require("./mutex");
 const queueMutex = new Mutex();
 
 const withQueueLock = async (fn) => {
-  const release = await queueMutex.lock();
+  const release = await queueMutex.acquire();
   try {
     return await fn();
   } finally {
-    release();
+    queueMutex.release();
   }
 };
 

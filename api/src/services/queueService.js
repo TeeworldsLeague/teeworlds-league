@@ -5,10 +5,7 @@ const resultRankedService = require("./resultRankedService");
 const QueueModel = require("../models/queue");
 const UserModel = require("../models/user");
 const StatRankedModel = require("../models/statRanked");
-const {
-  join: joinUtil,
-  leave: leaveUtil, ready, arePlayersReady, voteCancel, arePlayersVotedCancel,
-} = require("../utils/resultRanked");
+
 const {
   discordMessageQueue,
 } = require("../utils/discordMessages");
@@ -179,12 +176,35 @@ class QueueService {
 
   async join({ queue, user }) {
     return await this.mutex.runExclusive(async () => {
-      const resJoin = await joinUtil({ queue, user });
-      if (!resJoin.ok) return resJoin;
+
+      if (!queue) return { ok: false, message: "Queue not found" };
+      if (queue.players.some((player) => player.userId.toString() === user._id.toString())) return { ok: false, message: "Player already in queue" };
+
+      const resultRanked = await ResultRankedModel.findOne({
+        freezed: false,
+        $or: [{ "redPlayers.userId": user._id }, { "bluePlayers.userId": user._id }],
+      });
+      if (resultRanked) return { ok: false, message: "You are already in a game" };
+
+      const playerObj = {
+        userId: user._id,
+        userName: user.userName,
+        avatar: user.avatar,
+        clanId: user.clanId,
+        clanName: user.clanName,
+        discordId: user.discordId,
+        elo: user.elo,
+        joinedAt: new Date(),
+      };
+
+      queue.players.push(playerObj);
+      await queue.save();
 
       if (queue.guildId) {
         const discordMessage = await discordMessageQueue({ queue });
-        await discordService.updateMessage({
+
+        // update the queue message, Important: do not await this, to avoid blocking the leave function, build the message in the mutex though
+        discordService.updateMessage({
           channelId: queue.textChannelDisplayQueueId,
           messageId: queue.messageQueueId,
           ...discordMessage,
@@ -197,12 +217,18 @@ class QueueService {
 
   async leave({ queue, user }) {
     return await this.mutex.runExclusive(async () => {
-      const resLeave = await leaveUtil({ queue, user });
-      if (!resLeave.ok) return resLeave;
+
+      if (!queue) return { ok: false, message: "Queue not found" };
+      if (!queue.players.some((player) => player.userId.toString() === user._id.toString())) return { ok: false, message: "Player not in queue" };
+
+      queue.players = queue.players.filter((player) => player.userId.toString() !== user._id.toString());
+      await queue.save();
 
       if (queue.guildId) {
         const discordMessage = await discordMessageQueue({ queue });
-        await discordService.updateMessage({
+
+        // update the queue message, Important: do not await this, to avoid blocking the leave function, build the message in the mutex though
+        discordService.updateMessage({
           channelId: queue.textChannelDisplayQueueId,
           messageId: queue.messageQueueId,
           ...discordMessage,
@@ -270,7 +296,7 @@ class QueueService {
       queue.numberOfGames++;
       await queue.save();
 
-      // Update queue message
+      // Update queue message, here it is okay to wait for it since this is triggered async
       const resUpdateMessageQueue = await discordService.updateMessage({
         channelId: queue.textChannelDisplayQueueId,
         messageId: queue.messageQueueId,

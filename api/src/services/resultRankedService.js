@@ -6,6 +6,11 @@ const {
   discordPrivateMessageNewQueue,
 } = require("../utils/discordMessages");
 
+const {
+  join: joinUtil,
+  leave: leaveUtil, ready, arePlayersReady, voteCancel, arePlayersVotedCancel,
+} = require("../utils/resultRanked");
+
 
 const readyButtonCallBack = async (interaction) => {
   try {

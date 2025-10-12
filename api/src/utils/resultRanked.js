@@ -579,42 +579,6 @@ const ready = async ({ resultRanked, user }) => {
   return { ok: true, data: { resultRanked, user } };
 };
 
-const join = async ({ queue, user }) => {
-  if (!queue) return { ok: false, message: "Queue not found" };
-  if (queue.players.some((player) => player.userId.toString() === user._id.toString())) return { ok: false, message: "Player already in queue" };
-
-  const resultRanked = await ResultRankedModel.findOne({
-    freezed: false,
-    $or: [{ "redPlayers.userId": user._id }, { "bluePlayers.userId": user._id }],
-  });
-  if (resultRanked) return { ok: false, message: "You are already in a game" };
-
-  const playerObj = {
-    userId: user._id,
-    userName: user.userName,
-    avatar: user.avatar,
-    clanId: user.clanId,
-    clanName: user.clanName,
-    discordId: user.discordId,
-    elo: user.elo,
-    joinedAt: new Date(),
-  };
-
-  queue.players.push(playerObj);
-  await queue.save();
-
-  return { ok: true, data: { queue, user } };
-};
-
-const leave = async ({ queue, user }) => {
-  if (!queue) return { ok: false, message: "Queue not found" };
-  if (!queue.players.some((player) => player.userId.toString() === user._id.toString())) return { ok: false, message: "Player not in queue" };
-
-  queue.players = queue.players.filter((player) => player.userId.toString() !== user._id.toString());
-  await queue.save();
-
-  return { ok: true, data: { queue, user } };
-};
 
 const arePlayersReady = ({ resultRanked }) => {
   return resultRanked.redPlayers.every((player) => player.isReady) && resultRanked.bluePlayers.every((player) => player.isReady);
@@ -755,7 +719,6 @@ module.exports = {
   ready,
   arePlayersReady,
   join,
-  leave,
   deleteResultRankedDiscord,
   voteCancel,
   voteRed,

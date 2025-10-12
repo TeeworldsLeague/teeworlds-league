@@ -10,7 +10,7 @@ const { enumNumberOfPlayersPerTeam, enumNumberOfPlayersForGame, enumModes } = re
 const discordService = require("../services/discordService");
 const { join, leave } = require("../utils/resultRanked");
 const { discordMessageQueue, discordMessageClassement } = require("../utils/discordMessages");
-const { withQueueLock } = require('../utils/queue');
+const { runExclusiveWithId } = require('../utils/mutex');
 const createNewQueue = async ({ queue }) => {
   const resCreateCategoryQueue = await discordService.createCategory({ guildId: queue.guildId, name: queue.name });
   if (!resCreateCategoryQueue.ok) return resCreateCategoryQueue;
@@ -172,7 +172,7 @@ router.post(
     const { id } = req.params;
     const user = req.user;
 
-    return await withQueueLock(async () => {
+    return await runExclusiveWithId(id, async () => {
       const queue = await QueueModel.findById(id);
       const resJoin = await join({ queue, user });
       if (!resJoin.ok) return res.status(500).send(resJoin);
@@ -198,7 +198,7 @@ router.post(
     const { id } = req.params;
     const user = req.user;
 
-    return await withQueueLock( async () => {
+    return await runExclusiveWithId(id, async () => {
       const queue = await QueueModel.findById(id);
       const resLeave = await leave({ queue, user });
       if (!resLeave.ok) return res.status(500).send(resLeave);

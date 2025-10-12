@@ -31,4 +31,24 @@ class Mutex {
   }
 }
 
-module.exports = { Mutex };
+
+const mutexes = new Map();
+
+const runExclusiveWithId = async (id, fn) => {
+  if (!mutexes.has(id)) {
+    mutexes.set(id, new Mutex());
+  }
+  return await mutexes.get(id).runExclusive(fn);
+}
+
+const freeMutexWithId = async (id) => {
+  if (!mutexes.has(id)) {
+    return;
+  }
+
+  return await runExclusiveWithId(id, async () => {
+      mutexes.delete(id);
+  });
+}
+
+module.exports = { Mutex, runExclusiveWithId, freeMutexWithId };

@@ -6,17 +6,6 @@ const { discordMessageResultRankedNotReady, discordPrivateMessageNewQueue, disco
 
 const { Mutex } = require("./mutex");
 
-const queueMutex = new Mutex();
-
-const withQueueLock = async (fn) => {
-  const release = await queueMutex.acquire();
-  try {
-    return await fn();
-  } finally {
-    queueMutex.release();
-  }
-};
-
 const createGameFromQueue = async ({ queue }) => {
   const players = queue.players;
   if (players.length < queue.numberOfPlayersForGame) return { ok: false, message: "Not enough players in queue" };

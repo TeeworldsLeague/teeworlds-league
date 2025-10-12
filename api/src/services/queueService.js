@@ -13,6 +13,7 @@ const ResultRankedModel = require("../models/resultRanked");
 const { MessageFlags } = require("discord.js");
 
 
+// TODO: Move these to the QueueService or potentially a dedicated DiscordQueueHandler class or something?
 const joinQueueButtonCallBack = async (interaction) => {
   try {
     const queueId = interaction.customId.split("_")[0];

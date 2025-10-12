@@ -7,11 +7,11 @@ const {
 } = require("../utils/discordMessages");
 
 const {
-  join: joinUtil,
-  leave: leaveUtil, ready, arePlayersReady, voteCancel, arePlayersVotedCancel,
+  ready, arePlayersReady, voteCancel, arePlayersVotedCancel,
 } = require("../utils/resultRanked");
 
 
+// TODO: simplify button handling, we have a lot of duplicated code for checking the game, user and whether they are in the game, also, these functions get registered without locking atm
 const readyButtonCallBack = async (interaction) => {
   try {
     const resultRankedId = interaction.customId.split("_")[0];
@@ -254,11 +254,11 @@ class ResultRankedService {
   async onStartup() {
     const resultRankeds = await ResultRankedModel.find({ freezed: false });
     for (const resultRanked of resultRankeds) {
-      if (resultRanked.readyButtonId) discordService.registerButtonCallback(resultRanked.readyButtonId, readyButtonCallBack);
-      if (resultRanked.voteCancelButtonId) discordService.registerButtonCallback(resultRanked.voteCancelButtonId, cancelResultRankedButtonCallBack);
-      if (resultRanked.voteRedButtonId) discordService.registerButtonCallback(resultRanked.voteRedButtonId, voteRedResultRankedButtonCallBack);
+      if (resultRanked.readyButtonId) discordService.registerButtonCallback(resultRanked.readyButtonId, async () => {this.mutex.runExclusively(readyButtonCallBack)});
+      if (resultRanked.voteCancelButtonId) discordService.registerButtonCallback(resultRanked.voteCancelButtonId, async () => {this.mutex.runExclusively(cancelResultRankedButtonCallBack)});
+      if (resultRanked.voteRedButtonId) discordService.registerButtonCallback(resultRanked.voteRedButtonId, async () => {this.mutex.runExclusively(voteRedResultRankedButtonCallBack)});
       if (resultRanked.voteBlueButtonId)
-        discordService.registerButtonCallback(resultRanked.voteBlueButtonId, voteBlueResultRankedButtonCallBack);
+        discordService.registerButtonCallback(resultRanked.voteBlueButtonId, async () => {this.mutex.runExclusively(voteBlueResultRankedButtonCallBack)});
     }
 
     console.log("Callbacks for result ranked initialized");

@@ -1,12 +1,11 @@
 const { EmbedBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require("discord.js");
 const discordService = require("../services/discordService");
+const queueService = require("../services/queueService");
 const ResultRankedModel = require("../models/resultRanked");
 const UserModel = require("../models/user");
 const {
   ready,
   arePlayersReady,
-  join,
-  leave,
   voteCancel,
   voteRed,
   voteBlue,
@@ -463,7 +462,7 @@ const joinQueueButtonCallBack = async (interaction) => {
     const user = await UserModel.findOne({ userName: interaction.member.displayName });
     if (!user) return { ok: false, message: "User not found" };
 
-    const resJoin = await join({ queue, user });
+    const resJoin = await queueService.join({ queue, user });
     if (!resJoin.ok) {
       await interaction.reply({
         content: resJoin.message || "You are already in the queue!",
@@ -471,8 +470,6 @@ const joinQueueButtonCallBack = async (interaction) => {
       });
       return;
     }
-
-    await queue.save();
 
     await interaction.reply({
       content: `You have been added to the queue!`,
@@ -492,13 +489,6 @@ const joinQueueButtonCallBack = async (interaction) => {
 
       await user.save();
     }
-
-    const discordMessage = await discordMessageQueue({ queue });
-    await discordService.updateMessage({
-      channelId: queue.textChannelDisplayQueueId,
-      messageId: queue.messageQueueId,
-      ...discordMessage,
-    });
   } catch (error) {
     console.error(error);
   }
@@ -513,7 +503,7 @@ const leaveQueueButtonCallBack = async (interaction) => {
     const user = await UserModel.findOne({ userName: interaction.member.displayName });
     if (!user) return { ok: false, message: "User not found" };
 
-    const resLeave = await leave({ queue, user });
+    const resLeave = await queueService.leave({ queue, user });
     if (!resLeave.ok) {
       await interaction.reply({
         content: resLeave.message || "You are not in the queue!",
@@ -525,13 +515,6 @@ const leaveQueueButtonCallBack = async (interaction) => {
     await interaction.reply({
       content: `You left the queue!`,
       flags: [MessageFlags.Ephemeral],
-    });
-
-    const discordMessage = await discordMessageQueue({ queue });
-    await discordService.updateMessage({
-      channelId: queue.textChannelDisplayQueueId,
-      messageId: queue.messageQueueId,
-      ...discordMessage,
     });
   } catch (error) {
     console.error(error);

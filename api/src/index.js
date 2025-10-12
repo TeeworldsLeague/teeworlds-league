@@ -7,19 +7,9 @@ const cookieParser = require("cookie-parser");
 const fs = require("fs");
 const initCron = require("./cron/intCron");
 const DiscordService = require("./services/discordService");
-const QueueModel = require("./models/queue");
-const ResultRankedModel = require("./models/resultRanked");
+const queueService = require("./services/queueService");
 
 const { PORT, SENTRY_DSN, ENVIRONMENT, APP_URL } = require("./config");
-const discordService = require("./services/discordService");
-const {
-  joinQueueButtonCallBack,
-  leaveQueueButtonCallBack,
-  readyButtonCallBack,
-  cancelResultRankedButtonCallBack,
-  voteRedResultRankedButtonCallBack,
-  voteBlueResultRankedButtonCallBack,
-} = require("./utils/discordMessages");
 const app = express();
 
 if (ENVIRONMENT === "development") {
@@ -74,26 +64,6 @@ if (ENVIRONMENT === "production") {
 }
 
 initCron();
-DiscordService.init().then(() => {
-  const initCallbacksForQueues = async () => {
-    const queues = await QueueModel.find({});
-    for (const queue of queues) {
-      if (queue.joinButtonId) discordService.registerButtonCallback(queue.joinButtonId, joinQueueButtonCallBack);
-      if (queue.leaveButtonId) discordService.registerButtonCallback(queue.leaveButtonId, leaveQueueButtonCallBack);
-    }
-
-    const resultRankeds = await ResultRankedModel.find({ freezed: false });
-    for (const resultRanked of resultRankeds) {
-      if (resultRanked.readyButtonId) discordService.registerButtonCallback(resultRanked.readyButtonId, readyButtonCallBack);
-      if (resultRanked.voteCancelButtonId) discordService.registerButtonCallback(resultRanked.voteCancelButtonId, cancelResultRankedButtonCallBack);
-      if (resultRanked.voteRedButtonId) discordService.registerButtonCallback(resultRanked.voteRedButtonId, voteRedResultRankedButtonCallBack);
-      if (resultRanked.voteBlueButtonId) discordService.registerButtonCallback(resultRanked.voteBlueButtonId, voteBlueResultRankedButtonCallBack);
-    }
-
-    return { ok: true };
-  };
-
-  initCallbacksForQueues().then(() => {
-    console.log("Callbacks for queues initialized");
-  });
+DiscordService.init().then(async () => {
+  await queueService.onStartup();
 });

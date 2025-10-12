@@ -5,7 +5,6 @@ const morgan = require("morgan");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const fs = require("fs");
-const initCron = require("./cron/intCron");
 const DiscordService = require("./services/discordService");
 const queueService = require("./services/queueService");
 const resultRankedService = require("./services/resultRankedService");
@@ -64,7 +63,6 @@ if (ENVIRONMENT === "production") {
   });
 }
 
-initCron();
 DiscordService.init().then(async () => {
   await queueService.onStartup();
   await resultRankedService.onStartup();

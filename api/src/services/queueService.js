@@ -304,12 +304,28 @@ class QueueService {
     }
 
     console.log("Callbacks for queues initialized");
+
+    // initialize creation of games from queues every three seconds
+    setInterval(async () => {
+      await this.createGamesFromQueue();
+    }, 3000);
   }
 
   async onShutdown() {
     // Cleanup logic can be added here in the future
     console.log("Queue service shutting down");
   }
+
+  async createGamesFromQueue() {
+    // callback initialized in onStartup
+    const queues = await QueueModel.find({});
+
+    for (const queue of queues) {
+      const resCreateGameFromQueue = await queueService.createGameFromQueue({ queue });
+      if (!resCreateGameFromQueue.ok) continue;
+    }
+  };
+
 }
 
 const queueService = new QueueService();

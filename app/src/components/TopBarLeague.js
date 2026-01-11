@@ -63,11 +63,6 @@ const TopBarLeague = () => {
         </Link>
       </div>
       <div className="flex items-center pr-4">
-        <Link to="/league/users" className="ml-2">
-          Players
-        </Link>
-      </div>
-      <div className="flex items-center pr-4">
         <Link to="/league/clans" className="ml-2">
           Clans
         </Link>

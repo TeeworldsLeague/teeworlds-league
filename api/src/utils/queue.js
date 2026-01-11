@@ -102,6 +102,7 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
     redPlayers: redPlayersObj,
 
     mode: queue.mode,
+    eloMode: queue.eloMode,
 
     mapId: selectedMap._id,
     mapName: selectedMap.name,

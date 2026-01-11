@@ -3,6 +3,7 @@ const StatModel = require("../models/stat");
 const UserModel = require("../models/user");
 const ClanModel = require("../models/clan");
 const SeasonModel = require("../models/season");
+const { enumEloMode } = require("../enums/enumModes");
 
 // Generate a random number between 000000 and 999999 and return as string
 function generateEmailcodeValidation() {
@@ -60,7 +61,7 @@ async function unforfeitResult(result) {
 async function updateAllStatsResult(result) {
   await updateStatResult(result);
 
-  await computeEloResult(result);
+  if (result.eloMode === enumEloMode.ELO) await computeEloResult(result);
 
   const allPlayers = result.redPlayers.concat(result.bluePlayers);
   const users = await UserModel.find({ _id: { $in: allPlayers.map((p) => p.userId) } });

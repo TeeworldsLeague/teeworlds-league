@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { enumModes } = require("../enums/enumModes");
+const { enumModes, enumEloMode } = require("../enums/enumModes");
 const ObjectId = mongoose.Types.ObjectId;
 
 const MODELNAME = "resultRanked";
@@ -40,6 +40,7 @@ const Schema = new mongoose.Schema(
 
     date: { type: Date, default: Date.now },
     mode: { type: String, trim: true, default: enumModes.twoVTwo },
+    eloMode: { type: String, enum: enumEloMode, trim: true },
 
     mapId: { type: ObjectId },
     mapName: { type: String, trim: true },

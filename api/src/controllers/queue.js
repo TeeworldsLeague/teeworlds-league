@@ -147,6 +147,7 @@ router.post(
     if (!defaultMode) return res.status(400).send({ ok: false, message: "Default mode not found" });
     obj.modeId = defaultMode._id;
     obj.modeName = defaultMode.name;
+    obj.eloMode = defaultMode.eloMode;
 
     const queue = await QueueModel.create(obj);
     return res.status(200).send({ ok: true, data: queue.responseModel() });
@@ -265,6 +266,7 @@ router.put(
 
       objUpdate.modeId = mode._id;
       objUpdate.modeName = mode.name;
+      objUpdate.eloMode = mode.eloMode;
     }
 
     queue.set(objUpdate);

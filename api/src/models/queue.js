@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { enumModes, enumNumberOfPlayersForGame } = require("../enums/enumModes");
+const { enumModes, enumNumberOfPlayersForGame, enumEloMode } = require("../enums/enumModes");
 const ObjectId = mongoose.Types.ObjectId;
 
 const MODELNAME = "queue";
@@ -33,6 +33,7 @@ const Schema = new mongoose.Schema(
 
     modeId: { type: ObjectId },
     modeName: { type: String, trim: true },
+    eloMode: { type: String, enum: enumEloMode, trim: true },
 
     numberOfGames: { type: Number, default: 0 },
 

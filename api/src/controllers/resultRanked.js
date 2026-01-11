@@ -89,6 +89,7 @@ router.put(
     if (body.redScore) resultRanked.redScore = body.redScore;
     if (body.redPlayers) resultRanked.redPlayers = body.redPlayers;
     if (body.bluePlayers) resultRanked.bluePlayers = body.bluePlayers;
+    if (body.clanWar) resultRanked.clanWar = body.clanWar;
 
     await updateStatResultRanked(resultRanked);
 

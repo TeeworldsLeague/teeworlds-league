@@ -25,6 +25,9 @@ const Schema = new mongoose.Schema(
     clanId: { type: ObjectId },
     clanName: { type: String },
 
+    clanRankedId: { type: ObjectId },
+    clanRankedName: { type: String },
+
     discordId: { type: String },
 
     lastLoginAt: { type: Date, default: Date.now },

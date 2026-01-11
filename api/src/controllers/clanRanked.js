@@ -47,10 +47,24 @@ router.put(
   catchErrors(async (req, res) => {
     const body = req.body;
 
+    let needUpdateUsersInfos = false;
+
     const obj = {};
-    if (body.name) obj.name = body.name;
+    if (body.name) {
+      obj.name = body.name;
+      needUpdateUsersInfos = true;
+    }
 
     const clanRanked = await ClanRankedModel.findByIdAndUpdate(req.params.id, obj, { new: true });
+
+    if (needUpdateUsersInfos) {
+      const users = await UserModel.find({ clanId: clanRanked._id });
+      for (const user of users) {
+        user.clanName = clanRanked.name;
+        await user.save();
+      }
+    }
+
     return res.status(200).send({ ok: true, data: clanRanked.responseModel() });
   }),
 );
@@ -94,6 +108,10 @@ router.put(
 
     await clanRanked.save();
 
+    user.clanRankedId = clanRanked._id;
+    user.clanRankedName = clanRanked.name;
+    await user.save();
+
     // TODO: Update ranked stats if needed
     // This would require a mode parameter to update player ranked stats
     // await updateStatPlayerRanked({ player: user, mode });
@@ -117,6 +135,10 @@ router.delete(
     clanRanked.players = clanRanked.players.filter((player) => player.userId.toString() !== user._id.toString());
 
     await clanRanked.save();
+
+    user.clanRankedId = null;
+    user.clanRankedName = null;
+    await user.save();
 
     // TODO: Update ranked stats if needed
     // This would require a mode parameter to update player ranked stats

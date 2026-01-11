@@ -38,6 +38,8 @@ const Schema = new mongoose.Schema(
     modeId: { type: ObjectId },
     modeName: { type: String, trim: true },
 
+    clanWar: { type: Boolean, default: false },
+
     tournamentId: { type: ObjectId },
     tournamentName: { type: String, trim: true },
 
@@ -132,6 +134,7 @@ Schema.methods.responseModel = function () {
     redEloGain: this.redEloGain,
     blueEloGain: this.blueEloGain,
     freezed: this.freezed,
+    clanWar: this.clanWar,
   };
 };
 

@@ -19,6 +19,40 @@ const {
 } = require("./resultRanked");
 const QueueModel = require("../models/queue");
 
+const formatPlayersByClan = ({ queue }) => {
+  const { players, numberOfPlayersPerTeam } = queue;
+
+  const playersByClan = {};
+  players.forEach((player) => {
+    const clanKey = player.clanId ? player.clanId.toString() : "no-clan";
+    const clanName = player.clanName || "No Clan";
+
+    if (!playersByClan[clanKey]) {
+      playersByClan[clanKey] = {
+        clanName: clanName,
+        players: [],
+      };
+    }
+    playersByClan[clanKey].players.push(player);
+  });
+
+  let result = "";
+
+  Object.values(playersByClan).forEach((clan) => {
+    const playerCount = clan.players.length;
+    result += `${clan.clanName} (${playerCount}/${numberOfPlayersPerTeam})\n`;
+    clan.players.forEach((player) => {
+      result += `• ${player.userName}\n`;
+    });
+  });
+
+  if (players.length === 0) {
+    result = "• No players";
+  }
+
+  return result;
+};
+
 const discordMessageQueue = async ({ queue }) => {
   const joinButtonId = `${queue._id}_join_queue`;
   const joinQueueButton = createButton({ customId: joinButtonId, label: "Join Queue", style: ButtonStyle.Success });
@@ -26,10 +60,34 @@ const discordMessageQueue = async ({ queue }) => {
   const leaveButtonId = `${queue._id}_leave_queue`;
   const leaveQueueButton = createButton({ customId: leaveButtonId, label: "Leave Queue", style: ButtonStyle.Danger });
 
-  const embed = new EmbedBuilder()
-    .setTitle(queue.name)
-    .setColor(0x0099ff)
-    .addFields(
+  let embed = new EmbedBuilder().setTitle(queue.name).setColor(0x0099ff).setTimestamp();
+
+  if (queue.clanWar) {
+    embed.addFields(
+      {
+        name: "Maps",
+        value: queue.maps.map((map) => map.name).join(", "),
+        inline: true,
+      },
+      {
+        name: "Mode",
+        value: queue.mode,
+        inline: true,
+      },
+      {
+        name: "Players in Queue",
+        value: formatPlayersByClan({ queue }),
+        inline: false,
+      },
+      {
+        name: "IMPORTANT",
+        value:
+          "Be sure to be in a queue server and that your discord name is the same as your ingame name. Verify also that your clan tag is correct.",
+        inline: false,
+      },
+    );
+  } else {
+    embed.addFields(
       {
         name: "Maps",
         value: queue.maps.map((map) => map.name).join(", "),
@@ -50,8 +108,8 @@ const discordMessageQueue = async ({ queue }) => {
         value: "Be sure to be in a queue server and that your discord name is the same as your ingame name.",
         inline: true,
       },
-    )
-    .setTimestamp();
+    );
+  }
 
   queue.joinButtonId = joinButtonId;
   queue.leaveButtonId = leaveButtonId;

@@ -68,6 +68,9 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
           userId: player._id,
           elo: player.elo,
 
+          clanId: player.clanRankedId,
+          clanName: player.clanRankedName,
+
           discordId: player.discordId,
 
           modeId: queue.modeId,
@@ -79,6 +82,8 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
         userId: player._id,
         userName: player.userName,
         avatar: player.avatar,
+        clanId: player.clanId,
+        clanName: player.clanName,
         eloBefore: statRanked.elo,
         discordId: player.discordId,
       };
@@ -100,6 +105,8 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
 
     bluePlayers: bluePlayersObj,
     redPlayers: redPlayersObj,
+
+    clanWar: queue.clanWar,
 
     mode: queue.mode,
     eloMode: queue.eloMode,

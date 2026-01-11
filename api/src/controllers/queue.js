@@ -249,7 +249,7 @@ router.put(
 
     const objUpdate = {};
     if (body.name) objUpdate.name = body.name;
-    if (body.maps) objUpdate.maps = body.maps;
+    if (body.maps) objUpdate.maps = body.maps.map((map) => ({ ...map, mapId: map._id }));
     if (body.mode) {
       objUpdate.mode = body.mode;
     }

@@ -3,7 +3,6 @@ const StatModel = require("../models/stat");
 const UserModel = require("../models/user");
 const ClanModel = require("../models/clan");
 const SeasonModel = require("../models/season");
-const { enumMapsWithLabel } = require("../enums/enumMaps");
 
 // Generate a random number between 000000 and 999999 and return as string
 function generateEmailcodeValidation() {

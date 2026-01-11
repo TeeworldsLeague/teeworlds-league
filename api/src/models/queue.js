@@ -1,6 +1,4 @@
 const mongoose = require("mongoose");
-const modes = require("../enums/enumModes");
-const { enumMaps } = require("../enums/enumMaps");
 const { enumModes, enumNumberOfPlayersForGame } = require("../enums/enumModes");
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -8,6 +6,7 @@ const MODELNAME = "queue";
 
 const MapSchema = new mongoose.Schema({
   _id: { type: ObjectId },
+  mapId: { type: ObjectId },
   name: { type: String, trim: true },
 });
 

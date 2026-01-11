@@ -2,10 +2,14 @@ const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const { enumTournamentStageType, enumTournamentStageStatus, enumTournamentStatus } = require("../enums/enumTournament");
 const { enumNumberOfPlayersForGame } = require("../enums/enumModes");
-const { enumMaps } = require("../enums/enumMaps");
 const { enumModes } = require("../enums/enumModes");
 
 const MODELNAME = "tournament";
+
+const MapSchema = new mongoose.Schema({
+  _id: { type: ObjectId },
+  name: { type: String, trim: true },
+});
 
 const TeamSchema = new mongoose.Schema({
   name: { type: String, trim: true },
@@ -22,7 +26,7 @@ const StageSchema = new mongoose.Schema({
 
   numberOfPlayersForGame: { type: Number, default: enumNumberOfPlayersForGame.twoVTwo },
   numberOfPlayersPerTeam: { type: Number, default: 2 },
-  maps: { type: [String], default: [enumMaps.ctf_5, enumMaps.ctf_duskwood, enumMaps.ctf_cryochasm, enumMaps.ctf_mars, enumMaps.ctf_moon] },
+  maps: { type: [MapSchema], default: [] },
   mode: { type: String, enum: enumModes, default: enumModes.twoVTwo },
 
   modeId: { type: ObjectId, ref: "mode" },

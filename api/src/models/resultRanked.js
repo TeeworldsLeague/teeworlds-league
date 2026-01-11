@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 const { enumModes } = require("../enums/enumModes");
-const { enumMaps } = require("../enums/enumMaps");
 const ObjectId = mongoose.Types.ObjectId;
 
 const MODELNAME = "resultRanked";

@@ -36,6 +36,9 @@ const Schema = new mongoose.Schema(
     modeId: { type: ObjectId },
     modeName: { type: String, trim: true },
 
+    tournamentId: { type: ObjectId },
+    tournamentName: { type: String, trim: true },
+
     date: { type: Date, default: Date.now },
     mode: { type: String, trim: true, default: enumModes.twoVTwo },
     map: { type: String, trim: true, default: enumMaps.ctf_5 },

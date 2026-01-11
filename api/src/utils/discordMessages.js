@@ -32,7 +32,7 @@ const discordMessageQueue = async ({ queue }) => {
     .addFields(
       {
         name: "Maps",
-        value: queue.maps.join(", "),
+        value: queue.maps.map((map) => map.name).join(", "),
         inline: true,
       },
       {

@@ -6,6 +6,11 @@ const ObjectId = mongoose.Types.ObjectId;
 
 const MODELNAME = "queue";
 
+const MapSchema = new mongoose.Schema({
+  _id: { type: ObjectId },
+  name: { type: String, trim: true },
+});
+
 const PlayerSchema = new mongoose.Schema({
   userId: { type: ObjectId },
   userName: { type: String, trim: true },
@@ -24,7 +29,7 @@ const Schema = new mongoose.Schema(
     players: { type: [PlayerSchema], default: [] },
     numberOfPlayersForGame: { type: Number, default: enumNumberOfPlayersForGame.twoVTwo },
     numberOfPlayersPerTeam: { type: Number, default: 2 },
-    maps: { type: [ObjectId], ref: "map", default: [] },
+    maps: { type: [MapSchema], default: [] },
     mode: { type: String, enum: enumModes, default: enumModes.twoVTwo },
 
     modeId: { type: ObjectId },

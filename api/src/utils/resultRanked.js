@@ -7,6 +7,7 @@ const { detectMapFromServer } = require("./map");
 const discordService = require("../services/discordService");
 
 const { freeMutexWithId } = require("./mutex");
+const { enumEloMode } = require("../enums/enumModes");
 
 /*
 {
@@ -175,7 +176,7 @@ async function updateAllStatsResultRanked(resultRanked) {
 
   await updateStatResultRanked(resultRanked);
 
-  await computeEloResultRanked(resultRanked);
+  if (resultRanked.eloMode === enumEloMode.ELO) await computeEloResultRanked(resultRanked);
 
   const allPlayers = resultRanked.redPlayers.concat(resultRanked.bluePlayers);
   const users = await UserModel.find({ _id: { $in: allPlayers.map((p) => p.userId) } });

@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 
-const MODELNAME = "clan";
+const MODELNAME = "clanRanked";
 
 const PlayerSchema = new mongoose.Schema({
   userId: { type: ObjectId },
@@ -11,25 +11,9 @@ const PlayerSchema = new mongoose.Schema({
 
 const Schema = new mongoose.Schema(
   {
-    seasonId: { type: ObjectId },
-    seasonStartDate: { type: Date },
-    seasonEndDate: { type: Date },
-    seasonName: { type: String },
-
     name: { type: String, trim: true },
 
     players: { type: [PlayerSchema], default: [] },
-
-    points: { type: Number, default: 0 },
-
-    numberGames: { type: Number, default: 0 },
-    numberWins: { type: Number, default: 0 },
-    numberLosses: { type: Number, default: 0 },
-
-    difference: { type: Number, default: 0 },
-
-    winRate: { type: Number, default: 0 },
-    averageElo: { type: Number, default: 0 },
   },
   {
     timestamps: true,
@@ -39,10 +23,6 @@ const Schema = new mongoose.Schema(
 Schema.methods.responseModel = function () {
   return {
     _id: this._id,
-    seasonId: this.seasonId,
-    seasonName: this.seasonName,
-    seasonStartDate: this.seasonStartDate,
-    seasonEndDate: this.seasonEndDate,
     name: this.name,
     players: this.players,
     points: this.points,

@@ -13,6 +13,11 @@ const TopBarRanked = () => {
         </Link>
       </div>
       <div className="flex items-center pr-4">
+        <Link to="/ranked/clans" className="ml-2">
+          Clans
+        </Link>
+      </div>
+      <div className="flex items-center pr-4">
         <Link to="/ranked/results" className="ml-2">
           Results
         </Link>

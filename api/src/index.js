@@ -46,6 +46,7 @@ app.get("/", async (req, res) => {
 
 app.use("/user", require("./controllers/user"));
 app.use("/clan", require("./controllers/clan"));
+app.use("/clanRanked", require("./controllers/clanRanked"));
 app.use("/result", require("./controllers/result"));
 app.use("/stat", require("./controllers/stat"));
 app.use("/webhook", require("./controllers/webhook"));

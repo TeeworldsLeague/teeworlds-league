@@ -7,6 +7,7 @@ import ResultsRanked from "./resultsRanked";
 import StatsRanked from "./statsRanked";
 import Modes from "./modes";
 import Tournaments from "./tournaments";
+import ClansRanked from "../clansRanked";
 
 const Ranked = () => {
   return (
@@ -15,6 +16,7 @@ const Ranked = () => {
         <div className="flex-1">
           <Routes>
             <Route path="/users/*" element={<Users />} />
+            <Route path="/clans/*" element={<ClansRanked />} />
             <Route path="/queues/*" element={<Queues />} />
             <Route path="/results/*" element={<ResultsRanked />} />
             <Route path="/stats/*" element={<StatsRanked />} />

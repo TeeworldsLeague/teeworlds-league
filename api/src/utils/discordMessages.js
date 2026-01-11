@@ -122,12 +122,12 @@ const discordMessageResultRanked = async ({ resultRanked }) => {
     .addFields(
       {
         name: resultRanked.freezed ? "🎯 Result" : "🗺️ Map",
-        value: resultRanked.freezed ? `**${winner} won**\n${resultRanked.redScore} - ${resultRanked.blueScore}` : resultRanked.map,
+        value: resultRanked.freezed ? `**${winner} won**\n${resultRanked.redScore} - ${resultRanked.blueScore}` : resultRanked.mapName,
         inline: resultRanked.freezed ? false : true,
       },
       {
         name: resultRanked.freezed ? "🗺️ Map" : "🔴 Red Team",
-        value: resultRanked.freezed ? `**${resultRanked.map}**` : redPlayersFormatted,
+        value: resultRanked.freezed ? `**${resultRanked.mapName}**` : redPlayersFormatted,
         inline: true,
       },
       {
@@ -220,7 +220,7 @@ const discordMessageResultRankedFreezed = async ({ resultRanked }) => {
       },
       {
         name: "🗺️ Map",
-        value: `**${resultRanked.map}**`,
+        value: `**${resultRanked.mapName}**`,
         inline: true,
       },
       {
@@ -277,7 +277,7 @@ const discordMessageResultRankedVoted = async ({ resultRanked }) => {
       },
       {
         name: "🗺️ Map",
-        value: `**${resultRanked.map}**`,
+        value: `**${resultRanked.mapName}**`,
         inline: true,
       },
       {
@@ -328,7 +328,7 @@ const discordMessageResultRankedCanceled = async ({ resultRanked }) => {
       },
       {
         name: "🗺️ Map",
-        value: `**${resultRanked.map}**`,
+        value: `**${resultRanked.mapName}**`,
         inline: true,
       },
       {
@@ -617,7 +617,7 @@ const leaveQueueButtonCallBack = async (interaction) => {
 
 const readyButtonCallBack = async (interaction) => {
   try {
-    const resExtract = findResultRankedByInteraction(interaction);
+    const resExtract = await findResultRankedByInteraction(interaction);
     if (!resExtract.ok) return resExtract;
 
     const { resultRanked, user } = resExtract.data;
@@ -649,7 +649,7 @@ const readyButtonCallBack = async (interaction) => {
 
 const cancelResultRankedButtonCallBack = async (interaction) => {
   try {
-    const resExtract = findResultRankedByInteraction(interaction);
+    const resExtract = await findResultRankedByInteraction(interaction);
     if (!resExtract.ok) return resExtract;
 
     const { resultRanked, user } = resExtract.data;
@@ -690,7 +690,7 @@ const cancelResultRankedButtonCallBack = async (interaction) => {
 
 const voteRedResultRankedButtonCallBack = async (interaction) => {
   try {
-    const resExtract = findResultRankedByInteraction(interaction);
+    const resExtract = await findResultRankedByInteraction(interaction);
     if (!resExtract.ok) return resExtract;
 
     const { resultRanked, user } = resExtract.data;
@@ -741,7 +741,7 @@ const voteRedResultRankedButtonCallBack = async (interaction) => {
 
 const voteBlueResultRankedButtonCallBack = async (interaction) => {
   try {
-    const resExtract = findResultRankedByInteraction(interaction);
+    const resExtract = await findResultRankedByInteraction(interaction);
     if (!resExtract.ok) return resExtract;
 
     const { resultRanked, user } = resExtract.data;

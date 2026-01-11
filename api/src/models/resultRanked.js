@@ -41,7 +41,10 @@ const Schema = new mongoose.Schema(
 
     date: { type: Date, default: Date.now },
     mode: { type: String, trim: true, default: enumModes.twoVTwo },
-    map: { type: String, trim: true, default: enumMaps.ctf_5 },
+
+    mapId: { type: ObjectId },
+    mapName: { type: String, trim: true },
+
     scoreLimit: { type: Number, default: 1000 },
     timeLimit: { type: Number, default: 0 },
     isForfeit: { type: Boolean, default: false },

@@ -73,6 +73,7 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
   const bluePlayersObj = allPlayersObj.filter((p) => bluePlayerIds.has(p.userId.toString()));
   const redPlayersObj = allPlayersObj.filter((p) => !bluePlayerIds.has(p.userId.toString()));
 
+  const selectedMap = chooseMap(queue);
   const newResultRankedObj = {
     queueId: queue._id,
     numberFromQueue: queue.numberOfGames,
@@ -85,7 +86,9 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
     redPlayers: redPlayersObj,
 
     mode: queue.mode,
-    map: chooseMap(queue),
+
+    mapId: selectedMap._id,
+    mapName: selectedMap.name,
 
     guildId: queue.guildId,
     categoryQueueId: queue.categoryQueueId,

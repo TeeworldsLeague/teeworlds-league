@@ -8,6 +8,8 @@ import Loader from "./components/Loader";
 import Auth from "./scenes/auth";
 import Ranked from "./scenes/ranked";
 import League from "./scenes/league";
+import TopBar from "./components/TopBar.";
+import Profile from "./scenes/users/profile";
 
 const ProtectedLayout = () => {
   const dispatch = useDispatch();
@@ -40,6 +42,7 @@ const ProtectedLayout = () => {
 
   return (
     <div className="flex min-h-screen w-screen flex-col bg-gray-50">
+      <TopBar />
       <Outlet />
     </div>
   );
@@ -52,6 +55,7 @@ const App = () => {
         <Route element={<ProtectedLayout />}>
           <Route path="/ranked/*" element={<Ranked />} />
           <Route path="/league/*" element={<League />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/" element={<Navigate to="/ranked" replace />} />
         </Route>
 

@@ -1,7 +1,6 @@
 import React from "react";
 import { Route, Routes } from "react-router-dom";
 import Users from "../users";
-import TopBarRanked from "../../components/TopBarRanked";
 import FooterRanked from "../../components/FooterRanked";
 import Queues from "./queues";
 import ResultsRanked from "./resultsRanked";
@@ -13,7 +12,6 @@ const Ranked = () => {
   return (
     <div className="flex flex-1">
       <div className="flex min-h-screen w-full flex-col">
-        <TopBarRanked />
         <div className="flex-1">
           <Routes>
             <Route path="/users/*" element={<Users />} />

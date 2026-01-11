@@ -107,7 +107,7 @@ Schema.methods.responseModel = function () {
     numberFromQueue: this.numberFromQueue,
     queueName: this.queueName,
     mode: this.mode,
-    map: this.map,
+    mapName: this.mapName,
     scoreLimit: this.scoreLimit,
     timeLimit: this.timeLimit,
     isForfeit: this.isForfeit,

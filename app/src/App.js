@@ -8,6 +8,7 @@ import Loader from "./components/Loader";
 import Auth from "./scenes/auth";
 import Ranked from "./scenes/ranked";
 import League from "./scenes/league";
+import Admin from "./scenes/admin";
 import TopBar from "./components/TopBar.";
 import Profile from "./scenes/users/profile";
 
@@ -55,6 +56,7 @@ const App = () => {
         <Route element={<ProtectedLayout />}>
           <Route path="/ranked/*" element={<Ranked />} />
           <Route path="/league/*" element={<League />} />
+          <Route path="/admin/*" element={<Admin />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/" element={<Navigate to="/ranked" replace />} />
         </Route>

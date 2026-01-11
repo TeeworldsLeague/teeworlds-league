@@ -6,10 +6,12 @@ import { setUser } from "../redux/auth/actions";
 import GCTFLogo from "../assets/gctfLeagueLogo.png";
 import TopBarRanked from "./TopBarRanked";
 import TopBarLeague from "./TopBarLeague";
+import TopBarAdmin from "./TopBarAdmin";
 
 const navigationItems = [
   { label: "League", value: "/league", component: <TopBarLeague /> },
   { label: "Ranked", value: "/ranked", component: <TopBarRanked /> },
+  { label: "Admin", value: "/admin", component: <TopBarAdmin />, admin: true },
 ];
 
 const TopBar = () => {
@@ -58,11 +60,14 @@ const TopBar = () => {
               value={selectedNavigation?.value || ""}
               onChange={handleNavigationChange}
               className="bg-gray-700 text-white border border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-gray-500">
-              {navigationItems.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
+              {navigationItems.map(
+                (item) =>
+                  ((item.admin && user?.role === "ADMIN") || !item.admin) && (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ),
+              )}
             </select>
           </div>
         </div>

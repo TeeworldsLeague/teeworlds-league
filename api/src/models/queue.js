@@ -24,7 +24,7 @@ const Schema = new mongoose.Schema(
     players: { type: [PlayerSchema], default: [] },
     numberOfPlayersForGame: { type: Number, default: enumNumberOfPlayersForGame.twoVTwo },
     numberOfPlayersPerTeam: { type: Number, default: 2 },
-    maps: { type: [String], default: [enumMaps.ctf_5, enumMaps.ctf_duskwood, enumMaps.ctf_cryochasm, enumMaps.ctf_mars, enumMaps.ctf_moon] },
+    maps: { type: [ObjectId], ref: "map", default: [] },
     mode: { type: String, enum: enumModes, default: enumModes.twoVTwo },
 
     modeId: { type: ObjectId },

@@ -15,6 +15,34 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
   const allPlayers = [...bluePlayers, ...redPlayers];
   const allRealPlayers = await UserModel.find({ _id: { $in: allPlayers.map((player) => player.userId) } });
 
+  // Remove these users from all other queues
+  const playerIds = allPlayers.map((player) => player.userId);
+  const playerIdSet = new Set(playerIds.map((id) => id.toString()));
+  const otherQueues = await QueueModel.find({
+    _id: { $ne: queue._id },
+    "players.userId": { $in: playerIds },
+  });
+  otherQueues.forEach(async (otherQueue) => {
+    const initialLength = otherQueue.players.length;
+    otherQueue.players = otherQueue.players.filter((player) => !playerIdSet.has(player.userId.toString()));
+
+    // Only update if players were actually removed
+    if (otherQueue.players.length >= initialLength) {
+      return;
+    }
+    await otherQueue.save();
+
+    // Update Discord message for this queue
+    if (otherQueue.guildId) {
+      const discordMessage = await discordMessageQueue({ queue: otherQueue });
+      await discordService.updateMessage({
+        channelId: otherQueue.textChannelDisplayQueueId,
+        messageId: otherQueue.messageQueueId,
+        ...discordMessage,
+      });
+    }
+  });
+
   const allPlayersObj = await Promise.all(
     allRealPlayers.map(async (player) => {
       let statRanked = await StatRankedModel.findOne({ userId: player._id, modeId: queue.modeId });

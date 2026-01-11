@@ -4,6 +4,7 @@ const passport = require("passport");
 
 const QueueModel = require("../models/queue");
 const ModeModel = require("../models/mode");
+const ResultRankedModel = require("../models/resultRanked");
 const enumUserRole = require("../enums/enumUserRole");
 const { catchErrors } = require("../utils");
 const { enumNumberOfPlayersPerTeam, enumNumberOfPlayersForGame, enumModes } = require("../enums/enumModes");
@@ -267,6 +268,13 @@ router.put(
       objUpdate.modeId = mode._id;
       objUpdate.modeName = mode.name;
       objUpdate.eloMode = mode.eloMode;
+    }
+    if (body.clanWar && queue.clanWar !== body.clanWar) {
+      const resultsRanked = await ResultRankedModel.find({ queueId: id });
+      if (resultsRanked.length > 0) {
+        return res.status(400).send({ ok: false, message: "Queue is used in a result ranked, you can't change the clan war mode." });
+      }
+      objUpdate.clanWar = body.clanWar;
     }
 
     queue.set(objUpdate);

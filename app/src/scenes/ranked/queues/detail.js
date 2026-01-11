@@ -220,6 +220,18 @@ const Details = () => {
         />
       </div>
       <div className="mb-4">
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={queue.clanWar || false}
+            onChange={(e) => setQueue({ ...queue, clanWar: e.target.checked })}
+            disabled={!canEdit}
+            className="mr-2 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+          />
+          <span className="text-gray-700 text-sm font-bold">Clan War</span>
+        </label>
+      </div>
+      <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="maps">
           Maps
         </label>

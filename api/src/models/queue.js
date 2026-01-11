@@ -14,11 +14,14 @@ const PlayerSchema = new mongoose.Schema({
   userId: { type: ObjectId },
   userName: { type: String, trim: true },
   avatar: { type: String, trim: true },
+
   clanId: { type: ObjectId },
   clanName: { type: String, trim: true },
-  discordId: { type: String, trim: true },
+
   elo: { type: Number },
   joinedAt: { type: Date, default: Date.now },
+
+  discordId: { type: String, trim: true },
 });
 
 const Schema = new mongoose.Schema(
@@ -30,6 +33,8 @@ const Schema = new mongoose.Schema(
     numberOfPlayersPerTeam: { type: Number, default: 2 },
     maps: { type: [MapSchema], default: [] },
     mode: { type: String, enum: enumModes, default: enumModes.twoVTwo },
+
+    clanWar: { type: Boolean, default: false },
 
     modeId: { type: ObjectId },
     modeName: { type: String, trim: true },
@@ -66,6 +71,7 @@ Schema.methods.responseModel = function () {
     numberOfPlayersPerTeam: this.numberOfPlayersPerTeam,
     numberOfGames: this.numberOfGames,
     guildId: this.guildId,
+    clanWar: this.clanWar,
   };
 };
 

@@ -9,7 +9,8 @@ const PlayerSchema = new mongoose.Schema({
   userName: { type: String, trim: true },
   avatar: { type: String, trim: true },
 
-  discordId: { type: String, trim: true },
+  clanId: { type: ObjectId },
+  clanName: { type: String, trim: true },
 
   score: { type: Number, default: 0 },
   kills: { type: Number, default: 0 },
@@ -24,6 +25,8 @@ const PlayerSchema = new mongoose.Schema({
   voteCancel: { type: Boolean, default: false },
   voteRed: { type: Boolean, default: false },
   voteBlue: { type: Boolean, default: false },
+
+  discordId: { type: String, trim: true },
 });
 
 const Schema = new mongoose.Schema(

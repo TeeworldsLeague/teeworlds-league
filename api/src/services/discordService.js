@@ -191,6 +191,16 @@ class DiscordService {
     }
   }
 
+  async getGuild({ guildId }) {
+    try {
+      const guild = await this.client.guilds.fetch(guildId);
+      return { ok: true, data: { guild } };
+    } catch (error) {
+      console.error(`Failed to get guild ${guildId}:`, error);
+      return { ok: false, errorCode: enumErrorCode.SERVER_ERROR };
+    }
+  }
+
   async getChannel({ channelId }) {
     try {
       const channel = await this.client.channels.fetch(channelId);
@@ -365,7 +375,7 @@ class DiscordService {
     }
   }
 
-  async createVoiceChannel({ guildId, name, categoryId = null }) {
+  async createVoiceChannel({ guildId, name, categoryId = null, permissionOverwrites = null }) {
     const createOptions = {
       name: name,
       type: ChannelType.GuildVoice,
@@ -373,6 +383,10 @@ class DiscordService {
 
     if (categoryId) {
       createOptions.parent = categoryId;
+    }
+
+    if (permissionOverwrites) {
+      createOptions.permissionOverwrites = permissionOverwrites;
     }
 
     const guild = await this.client.guilds.fetch(guildId);

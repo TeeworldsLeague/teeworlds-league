@@ -5,6 +5,22 @@ const discordService = require("../services/discordService");
 const QueueModel = require("../models/queue");
 const { discordMessageResultRankedNotReady, discordPrivateMessageNewQueue, discordMessageQueue } = require("./discordMessages");
 const { runExclusiveWithId } = require("./mutex");
+const { PermissionFlagsBits } = require("discord.js");
+
+const createTeamVoiceChannelPermissions = ({ teamDiscordIds, guild }) => {
+  const everyoneRole = guild.roles.everyone;
+
+  return [
+    {
+      id: everyoneRole.id,
+      deny: [PermissionFlagsBits.Connect, PermissionFlagsBits.ViewChannel],
+    },
+    ...teamDiscordIds.map((userId) => ({
+      id: userId,
+      allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.ViewChannel],
+    })),
+  ];
+};
 
 const createGameFromQueueWithoutLock = async ({ queue }) => {
   const players = queue.players;
@@ -117,18 +133,37 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
   });
   newResultRanked.textChannelDisplayResultId = resCreateTextChannelDisplayResults.data.channel.id;
 
+  const redTeamDiscordIds = redPlayersObj.map((p) => p.discordId).filter((id) => id);
+  const blueTeamDiscordIds = bluePlayersObj.map((p) => p.discordId).filter((id) => id);
+
+  const resGetGuild = await discordService.getGuild({ guildId: newResultRanked.guildId });
+  if (!resGetGuild.ok) return { ok: false, message: "Failed to get guild" };
+  const guild = resGetGuild.data.guild;
+
+  const redChannelPermissions = createTeamVoiceChannelPermissions({
+    teamDiscordIds: redTeamDiscordIds,
+    guild,
+  });
+
+  const blueChannelPermissions = createTeamVoiceChannelPermissions({
+    teamDiscordIds: blueTeamDiscordIds,
+    guild,
+  });
+
   const resCreateVoiceRedChannel = await discordService.createVoiceChannel({
     guildId: newResultRanked.guildId,
-    name: "red_" + newResultRanked.id.toString(),
+    name: newResultRanked.id.toString(),
     categoryId: newResultRanked.categoryQueueId,
+    permissionOverwrites: redChannelPermissions,
   });
   if (!resCreateVoiceRedChannel.ok) return { ok: false, message: "Failed to create voice channel" };
   newResultRanked.voiceRedChannelId = resCreateVoiceRedChannel.data.channel.id;
 
   const resCreateVoiceBlueChannel = await discordService.createVoiceChannel({
     guildId: newResultRanked.guildId,
-    name: "blue_" + newResultRanked.id.toString(),
+    name: newResultRanked.id.toString(),
     categoryId: newResultRanked.categoryQueueId,
+    permissionOverwrites: blueChannelPermissions,
   });
   if (!resCreateVoiceBlueChannel.ok) return { ok: false, message: "Failed to create voice channel" };
   newResultRanked.voiceBlueChannelId = resCreateVoiceBlueChannel.data.channel.id;
@@ -142,7 +177,30 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
 
   for (const player of allRealPlayers) {
     if (!player.discordId) continue;
-    const discordPrivateMessage = discordPrivateMessageNewQueue({ resultRanked: newResultRanked });
+
+    const isRedPlayer = redPlayersObj.some((p) => p.userId.toString() === player._id.toString());
+    const isBluePlayer = bluePlayersObj.some((p) => p.userId.toString() === player._id.toString());
+
+    let voiceChannelInfo = null;
+    if (isRedPlayer && newResultRanked.voiceRedChannelId) {
+      voiceChannelInfo = {
+        channelId: newResultRanked.voiceRedChannelId,
+        guildId: newResultRanked.guildId,
+        teamName: "Red",
+      };
+    } else if (isBluePlayer && newResultRanked.voiceBlueChannelId) {
+      voiceChannelInfo = {
+        channelId: newResultRanked.voiceBlueChannelId,
+        guildId: newResultRanked.guildId,
+        teamName: "Blue",
+      };
+    }
+
+    const discordPrivateMessage = discordPrivateMessageNewQueue({
+      resultRanked: newResultRanked,
+      voiceChannelInfo,
+    });
+
     await discordService.sendPrivateMessage({
       userId: player.discordId,
       ...discordPrivateMessage,

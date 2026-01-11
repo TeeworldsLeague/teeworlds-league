@@ -386,15 +386,24 @@ const discordMessageResultRankedNotReady = async ({ resultRanked }) => {
   };
 };
 
-const discordPrivateMessageNewQueue = ({ resultRanked }) => {
+const discordPrivateMessageNewQueue = ({ resultRanked, voiceChannelInfo = null }) => {
+  const fileds = [];
+  if (voiceChannelInfo && voiceChannelInfo.channelId && voiceChannelInfo.teamName) {
+    fileds.push({
+      name: `🎤 Join ${voiceChannelInfo.teamName} Team Voice Channel`,
+      value: `https://discord.com/channels/${voiceChannelInfo.guildId}/${voiceChannelInfo.channelId}`,
+      inline: false,
+    });
+  }
+  fileds.push({
+    name: "📢 Join the game channel",
+    value: `https://discord.com/channels/${resultRanked.guildId}/${resultRanked.textChannelDisplayResultId}`,
+    inline: false,
+  });
   const embed = new EmbedBuilder()
     .setTitle("Game found : " + resultRanked.queueName)
     .setColor(0x0099ff)
-    .addFields({
-      name: "📢 Join the game channel",
-      value: `[Game channel to get ready !](https://discord.com/channels/${resultRanked.guildId}/${resultRanked.textChannelDisplayResultId}`,
-      inline: false,
-    })
+    .addFields(fileds)
     .setTimestamp();
 
   return {

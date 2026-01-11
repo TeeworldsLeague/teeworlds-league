@@ -5,11 +5,6 @@ const TopBarAdmin = () => {
   return (
     <>
       <div className="flex items-center pr-4">
-        <Link to="/admin/clans" className="ml-2">
-          Clans
-        </Link>
-      </div>
-      <div className="flex items-center pr-4">
         <Link to="/admin/users" className="ml-2">
           Users
         </Link>

@@ -52,12 +52,14 @@ const List = () => {
           <thead>
             <tr>
               <th className="px-4 py-2">Mode</th>
+              <th className="px-4 py-2">Elo Mode</th>
             </tr>
           </thead>
           <tbody>
             {modes.map((mode) => (
               <tr key={mode._id} className="cursor-pointer hover:bg-gray-100" onClick={() => navigate(`./${mode._id}`)}>
                 <td className="border px-4 py-2">{mode.name}</td>
+                <td className="border px-4 py-2">{mode.eloMode}</td>
               </tr>
             ))}
           </tbody>

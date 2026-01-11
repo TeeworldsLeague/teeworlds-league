@@ -5,7 +5,8 @@ const passport = require("passport");
 const ModeModel = require("../models/mode");
 const QueueModel = require("../models/queue");
 const enumUserRole = require("../enums/enumUserRole");
-const { catchErrors, updateStatPlayer } = require("../utils");
+const { catchErrors } = require("../utils");
+const ResultRankedModel = require("../models/resultRanked");
 
 router.get(
   "/:id",
@@ -58,6 +59,12 @@ router.put(
 
     const obj = {};
     if (body.name) obj.name = body.name;
+    if (body.eloMode && body.eloMode !== mode.eloMode) {
+      const resultsRanked = await ResultRankedModel.find({ modeId: id });
+      if (resultsRanked.length > 0)
+        return res.status(400).send({ ok: false, message: "Mode is used in a result ranked, you can't change the elo mode." });
+      obj.eloMode = body.eloMode;
+    }
 
     mode.set(obj);
     await mode.save();

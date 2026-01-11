@@ -7,7 +7,6 @@ const { detectMapFromServer } = require("./map");
 const discordService = require("../services/discordService");
 
 const { freeMutexWithId } = require("./mutex");
-const { createGameFromQueue } = require("./queue");
 
 /*
 {
@@ -609,6 +608,8 @@ const join = async ({ queue, user }) => {
 
   // check if we can create a game immediately
   // No await, this should run in background, note that the function is protected by a mutex and would not run in parallel to this one, also it will reload the queue from DB
+  // Lazy import to avoid circular dependency: resultRanked -> queue -> discordMessages -> resultRanked
+  const { createGameFromQueue } = require("./queue");
   createGameFromQueue({ queue });
 
   return { ok: true, data: { queue, user } };

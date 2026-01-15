@@ -1,8 +1,6 @@
 const { EmbedBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require("discord.js");
-const discordService = require("../services/discordService");
-const ResultRankedModel = require("../models/resultRanked");
-const UserModel = require("../models/user");
-const StatRankedModel = require("../models/statRanked");
+const StatRankedModel = require("../../models/statRanked");
+const discordService = require("../../services/discordService");
 const {
   ready,
   arePlayersReady,
@@ -16,8 +14,19 @@ const {
   deleteResultRankedDiscord,
   arePlayersVotedBlue,
   arePlayersVotedCancel,
-} = require("./resultRanked");
-const QueueModel = require("../models/queue");
+  voteBanPickStep,
+  tryFindVotedMap,
+  arePlayersReadyClanWar,
+  readyClanWar,
+} = require("../resultRanked");
+const QueueModel = require("../../models/queue");
+const {
+  findQueueByInteraction,
+  findResultRankedByInteraction,
+  findClanWarResultRankedByInteraction,
+  findUserByInteraction,
+  findMapByInteraction,
+} = require("./interactionHelper");
 
 const formatPlayersByClan = ({ queue }) => {
   const { players, numberOfPlayersPerTeam } = queue;
@@ -149,6 +158,43 @@ const discordMessageClassement = async ({ queue }) => {
   );
   return {
     embed: embed,
+  };
+};
+
+const discordMessageClanWarBanPickStep = async ({ clanWarResultRanked }) => {
+  const { bannedMaps, pickedMaps, pendingMaps, currentBanPickStep, maxStep, banPickSteps, clanStepName } = clanWarResultRanked;
+
+  const action = banPickSteps[currentBanPickStep - 1];
+
+  const embed = new EmbedBuilder()
+    .setTitle("🏆 Ban Pick Step")
+    .setDescription(`**${banPickSteps[currentBanPickStep - 1]}**`)
+    .setColor(0x0099ff)
+    .addFields(
+      {
+        name: `Clan turn to ${action.toLowerCase()}`,
+        value: clanStepName,
+      },
+      {
+        name: "Banned Maps",
+        value: bannedMaps.map((map) => map.name).join("\n"),
+      },
+      {
+        name: "Picked Maps",
+        value: pickedMaps.map((map) => map.name).join("\n"),
+      },
+    )
+    .setTimestamp();
+
+  const buttons = [];
+  pendingMaps.forEach((map) => {
+    buttons.push(createButton({ customId: `${resultRanked._id}_vote_${map._id}`, label: map.name, style: ButtonStyle.Primary }));
+    discordService.registerButtonCallback(`${resultRanked._id}_vote_${map._id}`, voteBanPickStepButtonCallBack);
+  });
+
+  return {
+    embed: embed,
+    buttons: buttons,
   };
 };
 
@@ -407,18 +453,18 @@ const discordMessageResultRankedCanceled = async ({ resultRanked }) => {
   };
 };
 
-const discordMessageResultRankedNotReady = async ({ resultRanked }) => {
-  const readyButtonId = `${resultRanked._id}_ready`;
+const discordMessageResultNotReady = async ({ result }) => {
+  const readyButtonId = `${result._id}_ready`;
   const readyButton = createButton({ customId: readyButtonId, label: "Ready", style: ButtonStyle.Success });
-  const allPlayers = [...resultRanked.redPlayers, ...resultRanked.bluePlayers];
+  const allPlayers = [...result[result.clanWar ? "clanOnePlayers" : "redPlayers"], ...result[result.clanWar ? "clanTwoPlayers" : "bluePlayers"]];
 
-  resultRanked.readyButtonId = readyButtonId;
-  await resultRanked.save();
+  result.readyButtonId = readyButtonId;
+  await result.save();
 
   discordService.registerButtonCallback(readyButtonId, readyButtonCallBack);
 
   const embed = new EmbedBuilder()
-    .setTitle(getGameStatus({ resultRanked }))
+    .setTitle(getGameStatus({ result }))
     .setColor(0x0099ff)
     .addFields(
       {
@@ -470,14 +516,11 @@ const discordPrivateMessageNewQueue = ({ resultRanked, voiceChannelInfo = null }
   };
 };
 
-const getGameStatus = ({ resultRanked }) => {
-  if (resultRanked.freezed) {
+const getGameStatus = ({ result }) => {
+  if (result.freezed) {
     return "Match Completed 🏆";
-  } else if (resultRanked.blueScore > 0 || resultRanked.redScore > 0) {
-    return "Match In Progress 🏆";
-  } else {
-    return "Match Starting 🏆";
   }
+  return "Match Starting 🏆";
 };
 
 const getRankEmoji = (position) => {
@@ -571,33 +614,6 @@ const formatCancelVotes = ({ resultRanked }) => {
 
 const createButton = ({ customId, label, style }) => {
   return new ButtonBuilder().setCustomId(customId).setLabel(label).setStyle(style);
-};
-
-const findQueueByInteraction = async (interaction) => {
-  const queueId = interaction.customId.split("_")[0];
-  const queue = await QueueModel.findById(queueId);
-
-  if (!queue) return { ok: false, message: "Queue not found" };
-
-  const user = await UserModel.findOne({ userName: interaction.member.displayName });
-  if (!user) return { ok: false, message: "User not found" };
-
-  return { ok: true, data: { queue, user } };
-};
-
-const findResultRankedByInteraction = async (interaction) => {
-  const resultRankedId = interaction.customId.split("_")[0];
-  const resultRanked = await ResultRankedModel.findById(resultRankedId);
-
-  if (!resultRanked) return { ok: false, message: "Game not found" };
-
-  const user = await UserModel.findOne({ userName: interaction.member.displayName });
-  if (!user) return { ok: false, message: "User not found" };
-
-  const resReady = await ready({ resultRanked, user });
-  if (!resReady.ok) return { ok: false, message: "Player not in result ranked" };
-
-  return { ok: true, data: { resultRanked, user } };
 };
 
 // CALLBACKS
@@ -711,6 +727,106 @@ const readyButtonCallBack = async (interaction) => {
     }
   } catch (error) {
     console.error(error);
+  }
+};
+
+const readyButtonClanWarCallBack = async (interaction) => {
+  try {
+    const resExtract = await findClanWarResultRankedByInteraction(interaction);
+    if (!resExtract.ok) return resExtract;
+
+    const { clanWarResultRanked, user } = resExtract.data;
+
+    const resReady = await readyClanWar({ clanWarResultRanked, user });
+    if (!resReady.ok) return { ok: false, message: "Player not in clan war result ranked" };
+
+    interaction.reply({ content: `You have been marked as ready!`, flags: [MessageFlags.Ephemeral] });
+
+    if (arePlayersReadyClanWar({ clanWarResultRanked })) {
+      discordService.deleteMessage({ channelId: clanWarResultRanked.textChannelDisplayResultId, messageId: clanWarResultRanked.messageReadyId });
+      clanWarResultRanked.messageReadyId = null;
+
+      discordService.unregisterButtonCallback(clanWarResultRanked.readyButtonId);
+      clanWarResultRanked.readyButtonId = null;
+
+      await clanWarResultRanked.save();
+    }
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const voteBanPickStepButtonCallBack = async (interaction) => {
+  try {
+    const resUser = await findUserByInteraction(interaction);
+    if (!resUser.ok) {
+      interaction.reply({ content: resUser.message || "User not found", flags: [MessageFlags.Ephemeral] });
+      return;
+    }
+    const resClanWarResultRanked = await findClanWarResultRankedByInteraction(interaction);
+    if (!resClanWarResultRanked.ok) {
+      interaction.reply({ content: resClanWarResultRanked.message || "Clan war result ranked not found", flags: [MessageFlags.Ephemeral] });
+      return;
+    }
+    const resFindMap = await findMapByInteraction(interaction);
+    if (!resFindMap.ok) {
+      interaction.reply({ content: resFindMap.message || "Map not found", flags: [MessageFlags.Ephemeral] });
+      return;
+    }
+
+    const { user } = resUser.data;
+    const { clanWarResultRanked } = resClanWarResultRanked.data;
+    const { map } = resFindMap.data;
+
+    const resVoteBanPickStep = await voteBanPickStep({ user, clanWarResultRanked, map });
+    if (!resVoteBanPickStep.ok) {
+      interaction.reply({ content: resVoteBanPickStep.message || "Failed to vote for the map", flags: [MessageFlags.Ephemeral] });
+      return;
+    }
+
+    interaction.reply({ content: `You have voted for the ${map.name} map!`, flags: [MessageFlags.Ephemeral] });
+
+    const resTryFindVotedMap = tryFindVotedMap({ clanWarResultRanked });
+    if (!resTryFindVotedMap.ok) return resTryFindVotedMap;
+    const { map: votedMap } = resTryFindVotedMap.data;
+    if (!votedMap) return { ok: true };
+
+    if (action === "PICK") {
+      clanWarResultRanked.pickedMaps.push(votedMap);
+    }
+    if (action === "BAN") {
+      clanWarResultRanked.bannedMaps.push(votedMap);
+    }
+
+    clanWarResultRanked.pendingMaps = clanWarResultRanked.pendingMaps.filter((m) => m._id.toString() !== votedMap._id.toString());
+    clanWarResultRanked.clanStepId =
+      clanWarResultRanked.clanStepId === clanWarResultRanked.clanOneId ? clanWarResultRanked.clanTwoId : clanWarResultRanked.clanOneId;
+    clanWarResultRanked.clanStepName =
+      clanWarResultRanked.clanStepId === clanWarResultRanked.clanOneId ? clanWarResultRanked.clanTwoName : clanWarResultRanked.clanOneName;
+    clanWarResultRanked.currentBanPickStep++;
+
+    await clanWarResultRanked.save();
+
+    interaction.reply({ content: `You have voted for the ${map.name} map!`, flags: [MessageFlags.Ephemeral] });
+
+    if (clanWarResultRanked.currentBanPickStep > clanWarResultRanked.maxStep) {
+      await discordService.updateMessage({
+        channelId: clanWarResultRanked.textChannelDisplayResultId,
+        messageId: clanWarResultRanked.messageResultId,
+        ...(await discordMessageClanWarResultRankedResultRankedStep({ clanWarResultRanked })),
+      });
+      return;
+    }
+
+    const discordMessage = await discordMessageClanWarBanPickStep({ clanWarResultRanked });
+    await discordService.updateMessage({
+      channelId: resultRanked.textChannelDisplayResultId,
+      messageId: resultRanked.messageResultId,
+      ...discordMessage,
+    });
+    return;
+  } catch (error) {
+    console.log(error);
   }
 };
 
@@ -865,7 +981,7 @@ module.exports = {
 
   // Result Ranked
   discordMessageResultRanked,
-  discordMessageResultRankedNotReady,
+  discordMessageResultNotReady,
 
   // Callbacks
   readyButtonCallBack,

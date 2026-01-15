@@ -14,7 +14,7 @@ const {
   deleteResultRankedDiscord,
 } = require("../utils/resultRanked");
 const discordService = require("../services/discordService");
-const { discordMessageResultRanked, discordMessageClassement } = require("../utils/discordMessages");
+const { discordMessageResultRanked, discordMessageClassement } = require("../utils/discordMessages").resultRankedMessages;
 
 router.get(
   "/:id",

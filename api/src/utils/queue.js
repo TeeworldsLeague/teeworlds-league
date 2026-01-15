@@ -1,11 +1,14 @@
 const UserModel = require("../models/user");
 const ResultRankedModel = require("../models/resultRanked");
 const StatRankedModel = require("../models/statRanked");
+const ClanWarResultRankedModel = require("../models/clanWarResultRanked");
 const discordService = require("../services/discordService");
+const ClanRankedModel = require("../models/clanRanked");
 const QueueModel = require("../models/queue");
-const { discordMessageResultRankedNotReady, discordPrivateMessageNewQueue, discordMessageQueue } = require("./discordMessages");
+const { discordMessageResultRankedNotReady, discordPrivateMessageNewQueue, discordMessageQueue } = require("./discordMessages").resultRankedMessages;
 const { runExclusiveWithId } = require("./mutex");
 const { PermissionFlagsBits } = require("discord.js");
+const { discordMessageResultNotReady } = require("./discordMessages/resultRankedMessages");
 
 const createTeamVoiceChannelPermissions = ({ teamDiscordIds, guild }) => {
   const everyoneRole = guild.roles.everyone;
@@ -26,9 +29,131 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
   const players = queue.players;
   if (players.length < queue.numberOfPlayersForGame) return { ok: false, message: "Not enough players in queue" };
 
-  const { bluePlayers, redPlayers } = choosePlayers(queue);
+  let allPlayers = [];
+  let result = null;
+  let playersTeamOne = [];
+  let playersTeamTwo = [];
 
-  const allPlayers = [...bluePlayers, ...redPlayers];
+  if (queue.clanWar) {
+    const { playersClanOne, playersClanTwo } = choosePlayersClan(queue);
+
+    const playersClanOneObj = playersClanOne.map((player) => ({
+      userId: player.userId,
+      userName: player.userName,
+      avatar: player.avatar,
+      clanId: player.clanId,
+      clanName: player.clanName,
+      elo: player.elo,
+    }));
+    const playersClanTwoObj = playersClanTwo.map((player) => ({
+      userId: player.userId,
+      userName: player.userName,
+      avatar: player.avatar,
+      clanId: player.clanId,
+      clanName: player.clanName,
+      elo: player.elo,
+    }));
+    const mapsObj = queue.maps.map((map) => ({
+      _id: map._id,
+      mapId: map.mapId,
+      name: map.name,
+    }));
+
+    const clanOne = await ClanRankedModel.findOne({ _id: playersClanOneObj[0]?.clanId });
+    const clanTwo = await ClanRankedModel.findOne({ _id: playersClanTwoObj[0]?.clanId });
+
+    if ((!clanOne && playersClanOneObj.length > 0) || (!clanTwo && playersClanTwoObj.length > 0)) return { ok: false, message: "Clan not found" };
+
+    const newClanWarResultRankedObj = {
+      queueId: queue._id,
+
+      modeId: queue.modeId,
+      modeName: queue.modeName,
+
+      clanOnePlayers: playersClanOneObj,
+      clanOneId: clanOne?._id,
+      clanOneName: clanOne?.name,
+      clanOneEloBefore: clanOne?.elo,
+      clanOneEloAfter: clanOne?.elo,
+      clanOneEloGain: 0,
+
+      clanTwoPlayers: playersClanTwoObj,
+      clanTwoId: clanTwo?._id,
+      clanTwoName: clanTwo?.name,
+      clanTwoEloBefore: clanTwo?.elo,
+      clanTwoEloAfter: clanTwo?.elo,
+      clanTwoEloGain: 0,
+
+      banPickSteps: queue.banPickSteps,
+      maxStep: queue.banPickSteps.length,
+      currentBanPickStep: 1,
+      clanStepId: Math.random() > 0.5 ? clanOne?._id : clanTwo?._id,
+      clanStepName: queue.banPickSteps[0],
+
+      maps: mapsObj,
+      pendingMaps: queue.maps,
+      pickedMaps: [],
+      bannedMaps: [],
+
+      eloMode: queue.eloMode,
+
+      guildId: queue.guildId,
+      categoryQueueId: queue.categoryQueueId,
+    };
+
+    const newClanWarResultRanked = await ClanWarResultRankedModel.create(newClanWarResultRankedObj);
+
+    allPlayers = [...playersClanOne, ...playersClanTwo];
+    playersTeamOne = playersClanOne;
+    playersTeamTwo = playersClanTwo;
+
+    result = newClanWarResultRanked;
+  } else {
+    const { bluePlayers, redPlayers } = choosePlayers(queue);
+
+    allPlayers = [...bluePlayers, ...redPlayers];
+    playersTeamOne = bluePlayers;
+    playersTeamTwo = redPlayers;
+
+    const bluePlayerIds = new Set(bluePlayers.map((p) => p.userId.toString()));
+    const bluePlayersObj = allPlayersObj.filter((p) => bluePlayerIds.has(p.userId.toString()));
+    const redPlayersObj = allPlayersObj.filter((p) => !bluePlayerIds.has(p.userId.toString()));
+
+    const selectedMap = chooseMap(queue);
+    const newResultRankedObj = {
+      queueId: queue._id,
+      numberFromQueue: queue.numberOfGames,
+      queueName: queue.name,
+
+      modeId: queue.modeId,
+      modeName: queue.modeName,
+
+      bluePlayers: bluePlayersObj,
+      redPlayers: redPlayersObj,
+
+      clanWar: queue.clanWar,
+      banPickSteps: queue.banPickSteps,
+      maxStep: queue.banPickSteps.length,
+      currentStep: 1,
+
+      maps: queue.maps,
+
+      mode: queue.mode,
+      eloMode: queue.eloMode,
+
+      mapId: selectedMap._id,
+      mapName: selectedMap.name,
+
+      guildId: queue.guildId,
+      categoryQueueId: queue.categoryQueueId,
+      textChannelDisplayFinalResultId: queue.textChannelDisplayResultsId,
+    };
+
+    const newResultRanked = await ResultRankedModel.create(newResultRankedObj);
+
+    result = newResultRanked;
+  }
+
   const allRealPlayers = await UserModel.find({ _id: { $in: allPlayers.map((player) => player.userId) } });
 
   // Remove these users from all other queues
@@ -90,37 +215,6 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
     }),
   );
 
-  const bluePlayerIds = new Set(bluePlayers.map((p) => p.userId.toString()));
-  const bluePlayersObj = allPlayersObj.filter((p) => bluePlayerIds.has(p.userId.toString()));
-  const redPlayersObj = allPlayersObj.filter((p) => !bluePlayerIds.has(p.userId.toString()));
-
-  const selectedMap = chooseMap(queue);
-  const newResultRankedObj = {
-    queueId: queue._id,
-    numberFromQueue: queue.numberOfGames,
-    queueName: queue.name,
-
-    modeId: queue.modeId,
-    modeName: queue.modeName,
-
-    bluePlayers: bluePlayersObj,
-    redPlayers: redPlayersObj,
-
-    clanWar: queue.clanWar,
-
-    mode: queue.mode,
-    eloMode: queue.eloMode,
-
-    mapId: selectedMap._id,
-    mapName: selectedMap.name,
-
-    guildId: queue.guildId,
-    categoryQueueId: queue.categoryQueueId,
-    textChannelDisplayFinalResultId: queue.textChannelDisplayResultsId,
-  };
-
-  const newResultRanked = await ResultRankedModel.create(newResultRankedObj);
-
   const selectedPlayerIds = new Set(allPlayersObj.map((p) => p.userId.toString()));
   queue.players = queue.players.filter((playerQueue) => !selectedPlayerIds.has(playerQueue.userId.toString()));
 
@@ -135,16 +229,16 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
   if (!resUpdateMessageQueue.ok) return { ok: false, message: "Failed to update message queue" };
 
   const resCreateTextChannelDisplayResults = await discordService.createTextChannel({
-    guildId: newResultRanked.guildId,
-    name: "queue_" + newResultRanked.id.toString(),
-    categoryId: newResultRanked.categoryQueueId,
+    guildId: result.guildId,
+    name: "queue_" + result.id.toString(),
+    categoryId: result.categoryQueueId,
   });
-  newResultRanked.textChannelDisplayResultId = resCreateTextChannelDisplayResults.data.channel.id;
+  result.textChannelDisplayResultId = resCreateTextChannelDisplayResults.data.channel.id;
 
-  const redTeamDiscordIds = redPlayersObj.map((p) => p.discordId).filter((id) => id);
-  const blueTeamDiscordIds = bluePlayersObj.map((p) => p.discordId).filter((id) => id);
+  const redTeamDiscordIds = playersTeamOne.map((p) => p.discordId).filter((id) => id);
+  const blueTeamDiscordIds = playersTeamTwo.map((p) => p.discordId).filter((id) => id);
 
-  const resGetGuild = await discordService.getGuild({ guildId: newResultRanked.guildId });
+  const resGetGuild = await discordService.getGuild({ guildId: result.guildId });
   if (!resGetGuild.ok) return { ok: false, message: "Failed to get guild" };
   const guild = resGetGuild.data.guild;
 
@@ -158,54 +252,54 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
     guild,
   });
 
-  const resCreateVoiceRedChannel = await discordService.createVoiceChannel({
-    guildId: newResultRanked.guildId,
-    name: newResultRanked.id.toString(),
-    categoryId: newResultRanked.categoryQueueId,
+  const resCreateVoiceTeamOneChannel = await discordService.createVoiceChannel({
+    guildId: result.guildId,
+    name: "team_one_" + result._id.toString(),
+    categoryId: result.categoryQueueId,
     permissionOverwrites: redChannelPermissions,
   });
-  if (!resCreateVoiceRedChannel.ok) return { ok: false, message: "Failed to create voice channel" };
-  newResultRanked.voiceRedChannelId = resCreateVoiceRedChannel.data.channel.id;
+  if (!resCreateVoiceTeamOneChannel.ok) return { ok: false, message: "Failed to create voice channel" };
+  result[queue.clanWar ? "voiceClanOneChannelId" : "voiceRedChannelId"] = resCreateVoiceTeamOneChannel.data.channel.id;
 
-  const resCreateVoiceBlueChannel = await discordService.createVoiceChannel({
-    guildId: newResultRanked.guildId,
-    name: newResultRanked.id.toString(),
-    categoryId: newResultRanked.categoryQueueId,
+  const resCreateVoiceTeamTwoChannel = await discordService.createVoiceChannel({
+    guildId: result.guildId,
+    name: "team_two_" + result._id.toString(),
+    categoryId: result.categoryQueueId,
     permissionOverwrites: blueChannelPermissions,
   });
-  if (!resCreateVoiceBlueChannel.ok) return { ok: false, message: "Failed to create voice channel" };
-  newResultRanked.voiceBlueChannelId = resCreateVoiceBlueChannel.data.channel.id;
+  if (!resCreateVoiceTeamTwoChannel.ok) return { ok: false, message: "Failed to create voice channel" };
+  result[queue.clanWar ? "voiceClanTwoChannelId" : "voiceBlueChannelId"] = resCreateVoiceTeamTwoChannel.data.channel.id;
 
-  const discordMessage = await discordMessageResultRankedNotReady({ resultRanked: newResultRanked });
+  const discordMessage = await discordMessageResultNotReady({ result });
   const resSendMessageReady = await discordService.sendMessage({
-    channelId: newResultRanked.textChannelDisplayResultId,
+    channelId: result.textChannelDisplayResultId,
     ...discordMessage,
   });
-  newResultRanked.messageReadyId = resSendMessageReady.data.message.id;
+  result.messageReadyId = resSendMessageReady.data.message.id;
 
   for (const player of allRealPlayers) {
     if (!player.discordId) continue;
 
-    const isRedPlayer = redPlayersObj.some((p) => p.userId.toString() === player._id.toString());
-    const isBluePlayer = bluePlayersObj.some((p) => p.userId.toString() === player._id.toString());
+    const isRedPlayer = playersTeamOne.some((p) => p.userId.toString() === player._id.toString());
+    const isBluePlayer = playersTeamTwo.some((p) => p.userId.toString() === player._id.toString());
 
     let voiceChannelInfo = null;
-    if (isRedPlayer && newResultRanked.voiceRedChannelId) {
+    if (isRedPlayer && result[queue.clanWar ? "voiceClanOneChannelId" : "voiceRedChannelId"]) {
       voiceChannelInfo = {
-        channelId: newResultRanked.voiceRedChannelId,
-        guildId: newResultRanked.guildId,
+        channelId: result[queue.clanWar ? "voiceClanOneChannelId" : "voiceRedChannelId"],
+        guildId: result.guildId,
         teamName: "Red",
       };
-    } else if (isBluePlayer && newResultRanked.voiceBlueChannelId) {
+    } else if (isBluePlayer && result[queue.clanWar ? "voiceClanTwoChannelId" : "voiceBlueChannelId"]) {
       voiceChannelInfo = {
-        channelId: newResultRanked.voiceBlueChannelId,
-        guildId: newResultRanked.guildId,
+        channelId: result[queue.clanWar ? "voiceClanTwoChannelId" : "voiceBlueChannelId"],
+        guildId: result.guildId,
         teamName: "Blue",
       };
     }
 
     const discordPrivateMessage = discordPrivateMessageNewQueue({
-      resultRanked: newResultRanked,
+      resultRanked: result,
       voiceChannelInfo,
     });
 
@@ -215,9 +309,9 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
     });
   }
 
-  await newResultRanked.save();
+  await result.save();
 
-  return { ok: true, data: { newResultRanked, queue } };
+  return { ok: true, data: { result, queue } };
 };
 
 const createGameFromQueue = async ({ queue }) => {
@@ -245,6 +339,24 @@ const choosePlayers = (queue) => {
   const redPlayers = playersShuffled.slice(numberOfPlayersPerTeam, numberOfPlayersForGame);
 
   return { bluePlayers, redPlayers };
+};
+
+const choosePlayersClan = (queue) => {
+  const numberOfPlayersPerTeam = queue.numberOfPlayersPerTeam;
+
+  const regroupedPlayers = queue.players.reduce((acc, player) => {
+    if (player.clanId) {
+      acc[player.clanId] = [...(acc[player.clanId] || []), player];
+    }
+    return acc;
+  }, {});
+
+  const regroupedPlayersArray = Object.values(regroupedPlayers);
+
+  const playersClanOne = regroupedPlayersArray.length > 0 ? regroupedPlayersArray[0].slice(0, numberOfPlayersPerTeam) : [];
+  const playersClanTwo = regroupedPlayersArray.length > 1 ? regroupedPlayersArray[1].slice(0, numberOfPlayersPerTeam) : [];
+
+  return { playersClanOne, playersClanTwo };
 };
 
 module.exports = { createGameFromQueue };

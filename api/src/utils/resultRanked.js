@@ -221,12 +221,14 @@ async function updateStatResultRanked(resultRanked) {
 async function updateStatPlayerRanked({ player, mode }) {
   let redResultsRanked = await ResultRankedModel.find({
     redPlayers: { $elemMatch: { userId: player._id } },
+    clanWar: false,
     hasBeenCanceled: false,
     freezed: true,
     modeId: mode._id,
   });
   let blueResultsRanked = await ResultRankedModel.find({
     bluePlayers: { $elemMatch: { userId: player._id } },
+    clanWar: false,
     hasBeenCanceled: false,
     freezed: true,
     modeId: mode._id,
@@ -583,6 +585,31 @@ const ready = async ({ resultRanked, user }) => {
   return { ok: true, data: { resultRanked, user } };
 };
 
+const readyClanWar = async ({ clanWarResultRanked, user }) => {
+  if (!clanWarResultRanked) return { ok: false, message: "Clan war result ranked not found" };
+  if (
+    !clanWarResultRanked.clanOnePlayers.some((player) => player.userId.toString() === user._id.toString()) &&
+    !clanWarResultRanked.clanTwoPlayers.some((player) => player.userId.toString() === user._id.toString())
+  )
+    return { ok: false, message: "Player not in clan war result ranked" };
+
+  clanWarResultRanked.clanOnePlayers.forEach((player) => {
+    if (player.userId.toString() === user._id.toString()) {
+      player.isReady = true;
+    }
+  });
+
+  clanWarResultRanked.clanTwoPlayers.forEach((player) => {
+    if (player.userId.toString() === user._id.toString()) {
+      player.isReady = true;
+    }
+  });
+
+  await clanWarResultRanked.save();
+
+  return { ok: true, data: { clanWarResultRanked, user } };
+};
+
 const join = async ({ queue, user }) => {
   if (!queue) return { ok: false, message: "Queue not found" };
   if (queue.players.some((player) => player.userId.toString() === user._id.toString())) return { ok: false, message: "Player already in queue" };
@@ -628,6 +655,49 @@ const leave = async ({ queue, user }) => {
 
 const arePlayersReady = ({ resultRanked }) => {
   return resultRanked.redPlayers.every((player) => player.isReady) && resultRanked.bluePlayers.every((player) => player.isReady);
+};
+
+const arePlayersReadyClanWar = ({ clanWarResultRanked }) => {
+  return clanWarResultRanked.clanOnePlayers.every((player) => player.isReady) && clanWarResultRanked.clanTwoPlayers.every((player) => player.isReady);
+};
+
+const voteBanPickStep = async ({ user, clanWarResultRanked, map }) => {
+  if (!clanWarResultRanked) return { ok: false, message: "Clan war result ranked not found" };
+  if (!map) return { ok: false, message: "Map not found" };
+
+  if (!clanWarResultRanked.pendingMaps.some((m) => m._id.toString() === map._id.toString())) {
+    return { ok: false, message: "Map not in pending maps" };
+  }
+
+  clanWarResultRanked.pendingMaps.forEach((m) => {
+    if (m._id.toString() === map._id.toString()) {
+      m.votedBy.filter((u) => u.toString() !== user._id.toString());
+    }
+  });
+
+  const pendingMap = clanWarResultRanked.pendingMaps.find((m) => m._id.toString() === map._id.toString());
+  pendingMap.votedBy.push(user._id);
+  await clanWarResultRanked.save();
+
+  return { ok: true };
+};
+
+const tryFindVotedMap = ({ clanWarResultRanked }) => {
+  if (clanWarResultRanked.pendingMaps.length === 0) return { ok: true, data: { map: null } };
+  const currentClanVoters =
+    clanWarResultRanked.clanStepId === clanWarResultRanked.clanOneId ? clanWarResultRanked.clanOnePlayers : clanWarResultRanked.clanTwoPlayers;
+
+  const totalVotes = currentClanVoters.length / 2;
+  const minimumVotes = Math.ceil(totalVotes * 0.5);
+
+  for (const map of clanWarResultRanked.pendingMaps) {
+    const votedBy = map.votedBy.length;
+    if (votedBy >= minimumVotes) {
+      return { ok: true, data: { map } };
+    }
+  }
+
+  return { ok: true, data: { map: null } };
 };
 
 const arePlayersVotedRed = ({ resultRanked }) => {
@@ -762,13 +832,17 @@ module.exports = {
   computeEloResultRanked,
   parseWebhookMessage,
   ready,
+  readyClanWar,
   arePlayersReady,
+  arePlayersReadyClanWar,
   join,
   leave,
   deleteResultRankedDiscord,
   voteCancel,
   voteRed,
   voteBlue,
+  voteBanPickStep,
+  tryFindVotedMap,
   arePlayersVotedRed,
   arePlayersVotedBlue,
   arePlayersVotedCancel,

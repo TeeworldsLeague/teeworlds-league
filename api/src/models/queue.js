@@ -35,6 +35,7 @@ const Schema = new mongoose.Schema(
     mode: { type: String, enum: enumModes, default: enumModes.twoVTwo },
 
     clanWar: { type: Boolean, default: false },
+    banPickSteps: { type: [String], default: ["PICK", "PICK", "BAN", "BAN", "PICK"] },
 
     modeId: { type: ObjectId },
     modeName: { type: String, trim: true },

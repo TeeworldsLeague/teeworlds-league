@@ -4,7 +4,7 @@ const { catchErrors, updateStatResult } = require("../utils");
 const { WEBHOOK_TOKEN, WEBHOOK_RANKED_TOKEN } = require("../config");
 const { updateAllStatsResultRanked, parseWebhookMessage, deleteResultRankedDiscord } = require("../utils/resultRanked");
 const WebhookModel = require("../models/webhooks");
-const { discordMessageResultRanked, discordMessageClassement } = require("../utils/discordMessages");
+const { discordMessageResultRanked, discordMessageClassement } = require("../utils/discordMessages").resultRankedMessages;
 const discordService = require("../services/discordService");
 
 router.post(

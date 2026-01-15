@@ -14,6 +14,8 @@ const Schema = new mongoose.Schema(
     name: { type: String, trim: true },
 
     players: { type: [PlayerSchema], default: [] },
+
+    elo: { type: Number, default: 1000 },
   },
   {
     timestamps: true,
@@ -25,13 +27,7 @@ Schema.methods.responseModel = function () {
     _id: this._id,
     name: this.name,
     players: this.players,
-    points: this.points,
-    numberGames: this.numberGames,
-    numberWins: this.numberWins,
-    numberLosses: this.numberLosses,
-    difference: this.difference,
-    winRate: this.winRate,
-    averageElo: this.averageElo,
+    elo: this.elo,
   };
 };
 

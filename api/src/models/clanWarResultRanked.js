@@ -51,6 +51,7 @@ const Schema = new mongoose.Schema(
     clanOneEloBefore: { type: Number, default: 1000 },
     clanOneEloAfter: { type: Number, default: 1000 },
     clanOneEloGain: { type: Number, default: 0 },
+    clanOneWins: { type: Number, default: 0 },
 
     clanTwoPlayers: { type: [PlayerSchema], default: [] },
     clanTwoId: { type: ObjectId },
@@ -58,6 +59,7 @@ const Schema = new mongoose.Schema(
     clanTwoEloBefore: { type: Number, default: 1000 },
     clanTwoEloAfter: { type: Number, default: 1000 },
     clanTwoEloGain: { type: Number, default: 0 },
+    clanTwoWins: { type: Number, default: 0 },
 
     banPickSteps: { type: [String], default: ["PICK", "PICK", "BAN", "BAN", "PICK"] },
     maxStep: { type: Number, default: 5 },
@@ -69,6 +71,8 @@ const Schema = new mongoose.Schema(
     pendingMaps: { type: [MapSchema], default: [] },
     pickedMaps: { type: [MapSchema], default: [] },
     bannedMaps: { type: [MapSchema], default: [] },
+    numberMapsToWin: { type: Number, default: 2 },
+    currentMapIndex: { type: Number, default: 0 },
 
     date: { type: Date, default: Date.now },
     mode: { type: String, trim: true, default: enumModes.twoVTwo },
@@ -83,9 +87,11 @@ const Schema = new mongoose.Schema(
     guildId: { type: String, trim: true },
     categoryQueueId: { type: String, trim: true },
     textChannelDisplayResultId: { type: String, trim: true },
+    readyButtonId: { type: String, trim: true },
+    messageReadyId: { type: String, trim: true },
+    messageBanPickStepId: { type: String, trim: true },
     voiceClanOneChannelId: { type: String, trim: true },
     voiceClanTwoChannelId: { type: String, trim: true },
-    messageReadyId: { type: String, trim: true },
   },
   {
     timestamps: true,

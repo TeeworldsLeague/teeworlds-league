@@ -8,6 +8,7 @@ const fs = require("fs");
 const DiscordService = require("./services/discordService");
 const QueueModel = require("./models/queue");
 const ResultRankedModel = require("./models/resultRanked");
+const ClanWarResultRankedModel = require("./models/clanWarResultRanked");
 
 const { createGameFromQueue } = require("./utils/queue");
 
@@ -21,6 +22,7 @@ const {
   voteRedResultRankedButtonCallBack,
   voteBlueResultRankedButtonCallBack,
 } = require("./utils/discordMessages");
+const { readyButtonClanWarCallBack } = require("./utils/discordMessages/resultRankedMessages");
 const app = express();
 
 if (ENVIRONMENT === "development") {
@@ -91,6 +93,11 @@ DiscordService.init().then(() => {
       if (resultRanked.voteCancelButtonId) discordService.registerButtonCallback(resultRanked.voteCancelButtonId, cancelResultRankedButtonCallBack);
       if (resultRanked.voteRedButtonId) discordService.registerButtonCallback(resultRanked.voteRedButtonId, voteRedResultRankedButtonCallBack);
       if (resultRanked.voteBlueButtonId) discordService.registerButtonCallback(resultRanked.voteBlueButtonId, voteBlueResultRankedButtonCallBack);
+    }
+
+    const clanWarResultRankeds = await ClanWarResultRankedModel.find({ freezed: false });
+    for (const clanWarResultRanked of clanWarResultRankeds) {
+      if (clanWarResultRanked.readyButtonId) discordService.registerButtonCallback(clanWarResultRanked.readyButtonId, readyButtonClanWarCallBack);
     }
 
     const createGamesFromQueues = async () => {

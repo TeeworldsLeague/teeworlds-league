@@ -3,7 +3,7 @@ const ResultRankedModel = require("../../models/resultRanked");
 const ClanWarResultRankedModel = require("../../models/clanWarResultRanked");
 const MapModel = require("../../models/map");
 const UserModel = require("../../models/user");
-const { ready, readyClanWar } = require("../resultRanked");
+const { ready } = require("../resultRanked");
 
 const findQueueByInteraction = async (interaction) => {
   const queueId = interaction.customId.split("_")[0];
@@ -36,11 +36,15 @@ const findClanWarResultRankedByInteraction = async (interaction) => {
   const clanWarResultRankedId = interaction.customId.split("_")[0];
   const clanWarResultRanked = await ClanWarResultRankedModel.findById(clanWarResultRankedId);
   if (!clanWarResultRanked) return { ok: false, message: "Clan war result ranked not found" };
-  return { ok: true, data: { clanWarResultRanked } };
+
+  const user = await UserModel.findOne({ userName: interaction.member.displayName });
+  if (!user) return { ok: false, message: "User not found" };
+
+  return { ok: true, data: { clanWarResultRanked, user } };
 };
 
 const findMapByInteraction = async (interaction) => {
-  const mapId = interaction.customId.split("_")[1];
+  const mapId = interaction.customId.split("_")[2];
   const map = await MapModel.findById(mapId);
   if (!map) return { ok: false, message: "Map not found" };
   return { ok: true, data: { map } };

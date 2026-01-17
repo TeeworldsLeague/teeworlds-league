@@ -12,6 +12,7 @@ const discordService = require("../services/discordService");
 const { join, leave } = require("../utils/resultRanked");
 const { discordMessageQueue, discordMessageClassement } = require("../utils/discordMessages").resultRankedMessages;
 const { runExclusiveWithId, freeMutexWithId } = require("../utils/mutex");
+
 const createNewQueue = async ({ queue }) => {
   const resCreateCategoryQueue = await discordService.createCategory({ guildId: queue.guildId, name: queue.name });
   if (!resCreateCategoryQueue.ok) return resCreateCategoryQueue;

@@ -614,11 +614,11 @@ const join = async ({ queue, user }) => {
   if (!queue) return { ok: false, message: "Queue not found" };
   if (queue.players.some((player) => player.userId.toString() === user._id.toString())) return { ok: false, message: "Player already in queue" };
 
-  const resultRanked = await ResultRankedModel.findOne({
-    freezed: false,
-    $or: [{ "redPlayers.userId": user._id }, { "bluePlayers.userId": user._id }],
-  });
-  if (resultRanked) return { ok: false, message: "You are already in a game" };
+  // const resultRanked = await ResultRankedModel.findOne({
+  //   freezed: false,
+  //   $or: [{ "redPlayers.userId": user._id }, { "bluePlayers.userId": user._id }],
+  // });
+  // if (resultRanked) return { ok: false, message: "You are already in a game" };
 
   const playerObj = {
     userId: user._id,
@@ -664,6 +664,13 @@ const arePlayersReadyClanWar = ({ clanWarResultRanked }) => {
 const voteBanPickStep = async ({ user, clanWarResultRanked, map }) => {
   if (!clanWarResultRanked) return { ok: false, message: "Clan war result ranked not found" };
   if (!map) return { ok: false, message: "Map not found" };
+  if (user.clanId === null) return { ok: false, message: "Player not in the two clans" };
+  if (
+    user.clanRankedId.toString() !== clanWarResultRanked?.clanOneId.toString() &&
+    user.clanRankedId.toString() !== clanWarResultRanked.clanTwoId?.toString()
+  )
+    return { ok: false, message: "Player not in the two clans" };
+  if (user.clanRankedId.toString() !== clanWarResultRanked.clanStepId?.toString()) return { ok: false, message: "Not your turn !" };
 
   if (!clanWarResultRanked.pendingMaps.some((m) => m._id.toString() === map._id.toString())) {
     return { ok: false, message: "Map not in pending maps" };
@@ -688,7 +695,7 @@ const tryFindVotedMap = ({ clanWarResultRanked }) => {
     clanWarResultRanked.clanStepId === clanWarResultRanked.clanOneId ? clanWarResultRanked.clanOnePlayers : clanWarResultRanked.clanTwoPlayers;
 
   const totalVotes = currentClanVoters.length / 2;
-  const minimumVotes = Math.ceil(totalVotes * 0.5);
+  const minimumVotes = Math.max(1, Math.ceil(totalVotes * 0.5));
 
   for (const map of clanWarResultRanked.pendingMaps) {
     const votedBy = map.votedBy.length;

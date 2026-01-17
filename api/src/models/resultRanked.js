@@ -29,19 +29,6 @@ const PlayerSchema = new mongoose.Schema({
   discordId: { type: String, trim: true },
 });
 
-const MapSchema = new mongoose.Schema({
-  _id: { type: ObjectId },
-  mapId: { type: ObjectId },
-  name: { type: String, trim: true },
-
-  clanWinnerId: { type: ObjectId },
-  clanWinnerName: { type: String, trim: true },
-  clanLooserId: { type: ObjectId },
-  clanLooserName: { type: String, trim: true },
-
-  votedBy: { type: [ObjectId], default: [] },
-});
-
 const Schema = new mongoose.Schema(
   {
     queueId: { type: ObjectId },
@@ -52,20 +39,6 @@ const Schema = new mongoose.Schema(
     modeName: { type: String, trim: true },
 
     clanWar: { type: Boolean, default: false },
-    clanOneId: { type: ObjectId },
-    clanOneName: { type: String, trim: true },
-    clanTwoId: { type: ObjectId },
-    clanTwoName: { type: String, trim: true },
-    banPickSteps: { type: [MapSchema], default: ["PICK", "PICK", "BAN", "BAN", "PICK"] },
-    maxStep: { type: Number, default: 5 },
-    currentBanPickStep: { type: Number, default: 1 },
-    clanStepId: { type: ObjectId },
-    clanStepName: { type: String, trim: true },
-
-    maps: { type: [MapSchema], default: [] },
-    pendingMaps: { type: [MapSchema], default: [] },
-    pickedMaps: { type: [MapSchema], default: [] },
-    bannedMaps: { type: [MapSchema], default: [] },
 
     tournamentId: { type: ObjectId },
     tournamentName: { type: String, trim: true },

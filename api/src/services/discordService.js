@@ -346,9 +346,14 @@ class DiscordService {
         updateOptions.embeds = [embed];
       }
 
-      if (buttons) {
-        const buttonRow = new ActionRowBuilder().addComponents(buttons);
-        updateOptions.components = [buttonRow];
+      if (buttons !== null && buttons !== undefined) {
+        if (buttons.length === 0) {
+          // Explicitly set empty components array to remove all buttons
+          updateOptions.components = [];
+        } else {
+          const buttonRow = new ActionRowBuilder().addComponents(buttons);
+          updateOptions.components = [buttonRow];
+        }
       }
 
       this.messageUpdateManager.queueUpdate(channelId, messageId, updateOptions); // note that this is throttled and may not happen immediately!

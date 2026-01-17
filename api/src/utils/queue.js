@@ -64,6 +64,8 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
 
     if ((!clanOne && playersClanOneObj.length > 0) || (!clanTwo && playersClanTwoObj.length > 0)) return { ok: false, message: "Clan not found" };
 
+    const clanChoosed = Math.random() > 0.5 ? "clanOne" : "clanTwo";
+
     const newClanWarResultRankedObj = {
       queueId: queue._id,
 
@@ -87,8 +89,8 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
       banPickSteps: queue.banPickSteps,
       maxStep: queue.banPickSteps.length,
       currentBanPickStep: 1,
-      clanStepId: Math.random() > 0.5 ? clanOne?._id : clanTwo?._id,
-      clanStepName: queue.banPickSteps[0],
+      clanStepId: clanChoosed === "clanOne" ? clanOne?._id : clanTwo?._id,
+      clanStepName: clanChoosed === "clanOne" ? clanOne?.name : clanTwo?.name,
 
       maps: mapsObj,
       pendingMaps: queue.maps,

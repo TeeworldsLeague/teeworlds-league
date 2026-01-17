@@ -61,6 +61,11 @@ const Schema = new mongoose.Schema(
     clanTwoEloGain: { type: Number, default: 0 },
     clanTwoWins: { type: Number, default: 0 },
 
+    winnerId: { type: ObjectId },
+    winnerName: { type: String, trim: true },
+    looserId: { type: ObjectId },
+    looserName: { type: String, trim: true },
+
     banPickSteps: { type: [String], default: ["PICK", "PICK", "BAN", "BAN", "PICK"] },
     maxStep: { type: Number, default: 5 },
     currentBanPickStep: { type: Number, default: 1 },

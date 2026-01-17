@@ -91,6 +91,11 @@ const tryEndClanWar = async ({ clanWarResultRanked }) => {
   clanWarResultRanked.freezed = true;
   clanWarResultRanked.freezedAt = new Date();
 
+  clanWarResultRanked.winnerName = winner === "clanOne" ? clanWarResultRanked.clanOneName : clanWarResultRanked.clanTwoName;
+  clanWarResultRanked.winnerId = winner === "clanOne" ? clanWarResultRanked.clanOneId : clanWarResultRanked.clanTwoId;
+  clanWarResultRanked.looserName = winner === "clanOne" ? clanWarResultRanked.clanTwoName : clanWarResultRanked.clanOneName;
+  clanWarResultRanked.looserId = winner === "clanOne" ? clanWarResultRanked.clanTwoId : clanWarResultRanked.clanOneId;
+
   const clanOne = await ClanRankedModel.findById(clanWarResultRanked.clanOneId);
   const clanTwo = await ClanRankedModel.findById(clanWarResultRanked.clanTwoId);
 

@@ -558,6 +558,38 @@ const discordMessageClanWarOngoing = async ({ clanWarResultRanked }) => {
   }
 };
 
+const discordMessageClanWarFinalResult = async ({ clanWarResultRanked }) => {
+  const embed = new EmbedBuilder()
+    .setTitle("🏆 Clan War Final Result 🏆")
+    .setDescription("Final result of the clan war")
+    .setColor(0x0099ff)
+    .addFields(
+      {
+        name: "🎯 Result",
+        value: `**${clanWarResultRanked.winnerName} won**`,
+      },
+      {
+        name: "🗺️ Maps",
+        value: `**${clanWarResultRanked.pickedMaps.map((map) => map.name).join("\n")}**`,
+        inline: true,
+      },
+      {
+        name: clanWarResultRanked.clanOneName,
+        value: clanWarResultRanked.clanOnePlayers.map((player) => `• ${player.userName} (${player.clanName})`).join("\n"),
+        inline: true,
+      },
+      {
+        name: clanWarResultRanked.clanTwoName,
+        value: clanWarResultRanked.clanTwoPlayers.map((player) => `• ${player.userName} (${player.clanName})`).join("\n"),
+        inline: true,
+      },
+    )
+    .setTimestamp();
+  return {
+    embed: embed,
+  };
+};
+
 const getGameStatus = ({ result }) => {
   if (result.freezed) {
     return "Match Completed 🏆";
@@ -682,6 +714,12 @@ const handleClanWarAfterVote = async ({ resultRanked }) => {
   const { clanWarResultRanked: newClanWarResultRanked } = resTryEndClanWar.data;
   if (newClanWarResultRanked.freezed) {
     await deleteClanWarResultRankedDiscord({ clanWarResultRanked });
+
+    const discordMessageClanWarResult = await discordMessageClanWarFinalResult({ clanWarResultRanked });
+    await discordService.sendMessage({
+      channelId: clanWarResultRanked.textChannelDisplayFinalResultId,
+      ...discordMessageClanWarResult,
+    });
     return { ok: true };
   }
 

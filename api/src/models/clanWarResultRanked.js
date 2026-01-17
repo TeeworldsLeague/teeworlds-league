@@ -87,11 +87,14 @@ const Schema = new mongoose.Schema(
     guildId: { type: String, trim: true },
     categoryQueueId: { type: String, trim: true },
     textChannelDisplayResultId: { type: String, trim: true },
+    textChannelDisplayFinalResultId: { type: String, trim: true },
     readyButtonId: { type: String, trim: true },
     messageReadyId: { type: String, trim: true },
     messageBanPickStepId: { type: String, trim: true },
     voiceClanOneChannelId: { type: String, trim: true },
     voiceClanTwoChannelId: { type: String, trim: true },
+
+    messageResultId: { type: String, trim: true },
   },
   {
     timestamps: true,

@@ -811,21 +811,26 @@ const voteBlue = async ({ resultRanked, user }) => {
   return { ok: true, data: { resultRanked, user } };
 };
 
-const deleteResultRankedDiscord = async ({ resultRanked }) => {
-  if (!resultRanked.guildId) return { ok: true };
+const deleteResultDiscord = async ({ result }) => {
+  if (!result.guildId) return { ok: true };
 
-  await discordService.deleteChannel({ channelId: resultRanked.textChannelDisplayResultId });
-  resultRanked.textChannelDisplayResultId = null;
+  await discordService.deleteMessage({ channelId: result.textChannelDisplayFinalResultId, messageId: result.messageResultId });
+  result.messageResultId = null;
 
-  await discordService.deleteChannel({ channelId: resultRanked.voiceRedChannelId });
-  resultRanked.voiceRedChannelId = null;
+  if (!result.clanWar) {
+    await discordService.deleteChannel({ channelId: result.textChannelDisplayResultId });
+    result.textChannelDisplayResultId = null;
 
-  await discordService.deleteChannel({ channelId: resultRanked.voiceBlueChannelId });
-  resultRanked.voiceBlueChannelId = null;
+    await discordService.deleteChannel({ channelId: result.voiceRedChannelId });
+    result.voiceRedChannelId = null;
 
-  discordService.unregisterButtonCallback(resultRanked.readyButtonId);
+    await discordService.deleteChannel({ channelId: result.voiceBlueChannelId });
+    result.voiceBlueChannelId = null;
 
-  await freeMutexWithId(resultRanked._id.toString());
+    discordService.unregisterButtonCallback(result.readyButtonId);
+  }
+
+  await freeMutexWithId(result._id.toString());
 
   return { ok: true };
 };
@@ -844,7 +849,7 @@ module.exports = {
   arePlayersReadyClanWar,
   join,
   leave,
-  deleteResultRankedDiscord,
+  deleteResultDiscord,
   voteCancel,
   voteRed,
   voteBlue,

@@ -39,6 +39,7 @@ const Schema = new mongoose.Schema(
     modeName: { type: String, trim: true },
 
     clanWar: { type: Boolean, default: false },
+    resultRankedClanWarId: { type: ObjectId },
 
     tournamentId: { type: ObjectId },
     tournamentName: { type: String, trim: true },

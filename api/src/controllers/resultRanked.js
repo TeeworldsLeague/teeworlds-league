@@ -11,7 +11,7 @@ const {
   unforfeitResultRanked,
   updateAllStatsResultRanked,
   updateStatResultRanked,
-  deleteResultRankedDiscord,
+  deleteResultDiscord,
 } = require("../utils/resultRanked");
 const discordService = require("../services/discordService");
 const { discordMessageResultRanked, discordMessageClassement } = require("../utils/discordMessages").resultRankedMessages;
@@ -199,7 +199,7 @@ router.post(
     await updateAllStatsResultRanked(resultRanked);
 
     if (resultRanked.guildId) {
-      await deleteResultRankedDiscord({ resultRanked });
+      await deleteResultDiscord({ result: resultRanked });
 
       await discordService.sendMessage({
         channelId: resultRanked.textChannelDisplayFinalResultId,
@@ -266,7 +266,7 @@ router.delete(
     if (!resultRanked) return res.status(400).send({ ok: false, message: "Result not found" });
     if (resultRanked.freezed) return res.status(400).send({ ok: false, message: "Result already frozen" });
 
-    const resDeleteResultRanked = await deleteResultRankedDiscord({ resultRanked });
+    const resDeleteResultRanked = await deleteResultDiscord({ result: resultRanked });
     if (!resDeleteResultRanked.ok) return res.status(500).send(resDeleteResultRanked);
 
     await resultRanked.deleteOne();

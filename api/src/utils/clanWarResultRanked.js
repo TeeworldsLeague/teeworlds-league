@@ -1,11 +1,17 @@
 const ResultRankedModel = require("../models/resultRanked");
 const MapModel = require("../models/map");
+const ClanRankedModel = require("../models/clanRanked");
 
 const startNextResultRanked = async ({ clanWarResultRanked }) => {
   const pickedMaps = clanWarResultRanked.pickedMaps;
   if (pickedMaps.length === 0) return { ok: false, message: "No maps picked" };
 
   if (clanWarResultRanked.currentMapIndex >= pickedMaps.length) return { ok: false, message: "No more maps to start" };
+
+  const resTryFindWinner = await tryFindWinner({ clanWarResultRanked });
+  if (!resTryFindWinner.ok) return resTryFindWinner;
+  const { winner } = resTryFindWinner.data;
+  if (winner) return { ok: false, message: "Winner already found" };
 
   const mapObj = pickedMaps[clanWarResultRanked.currentMapIndex];
   const map = await MapModel.findById(mapObj.mapId);
@@ -15,12 +21,15 @@ const startNextResultRanked = async ({ clanWarResultRanked }) => {
   const sideClanTwo = sideClanOne === "red" ? "blue" : "red";
 
   const redPlayers = sideClanOne === "red" ? clanWarResultRanked.clanOnePlayers : clanWarResultRanked.clanTwoPlayers;
-  const bluePlayers = sideClanTwo === "blue" ? clanWarResultRanked.clanOnePlayers : clanWarResultRanked.clanTwoPlayers;
+  const bluePlayers = sideClanTwo === "blue" ? clanWarResultRanked.clanTwoPlayers : clanWarResultRanked.clanOnePlayers;
 
   const newResultRanked = await ResultRankedModel.create({
     queueId: clanWarResultRanked.queueId,
     numberFromQueue: clanWarResultRanked.numberFromQueue,
     queueName: clanWarResultRanked.queueName,
+
+    clanWar: true,
+    resultRankedClanWarId: clanWarResultRanked._id,
 
     modeId: clanWarResultRanked.modeId,
     modeName: clanWarResultRanked.modeName,
@@ -34,6 +43,14 @@ const startNextResultRanked = async ({ clanWarResultRanked }) => {
     date: new Date(),
     mode: clanWarResultRanked.mode,
     eloMode: clanWarResultRanked.eloMode,
+
+    // DISCORD
+    guildId: clanWarResultRanked.guildId,
+    categoryQueueId: clanWarResultRanked.categoryQueueId,
+    textChannelDisplayResultId: clanWarResultRanked.textChannelDisplayResultId,
+    textChannelDisplayFinalResultId: clanWarResultRanked.textChannelDisplayResultId,
+    messageReadyId: clanWarResultRanked.messageReadyId,
+    messageResultId: clanWarResultRanked.messageResultId,
   });
 
   clanWarResultRanked.pickedMaps[clanWarResultRanked.currentMapIndex].resultRankedId = newResultRanked._id;
@@ -61,6 +78,35 @@ const getOngoingResultRanked = async ({ clanWarResultRanked }) => {
   return { ok: true, data: { resultRanked } };
 };
 
+const tryEndClanWar = async ({ clanWarResultRanked }) => {
+  const resFindWinner = await tryFindWinner({ clanWarResultRanked });
+  if (!resFindWinner.ok) return resFindWinner;
+  const { winner } = resFindWinner.data;
+  if (!winner) return { ok: true, data: { clanWarResultRanked } };
+
+  if (clanWarResultRanked.freezed) return { ok: true, data: { clanWarResultRanked } };
+
+  clanWarResultRanked.freezed = true;
+  clanWarResultRanked.freezedAt = new Date();
+
+  const clanOne = await ClanRankedModel.findById(clanWarResultRanked.clanOneId);
+  const clanTwo = await ClanRankedModel.findById(clanWarResultRanked.clanTwoId);
+
+  if (winner === "clanOne") {
+    clanWarResultRanked.clanOneWins++;
+    clanOne.numberWins++;
+    await clanOne.save();
+  } else {
+    clanWarResultRanked.clanTwoWins++;
+    clanTwo.numberWins++;
+    await clanTwo.save();
+  }
+
+  await clanWarResultRanked.save();
+
+  return { ok: true, data: { clanWarResultRanked } };
+};
+
 const tryFindWinner = async ({ clanWarResultRanked }) => {
   const numberMapsToWin = clanWarResultRanked.numberMapsToWin;
   const clanOneWins = clanWarResultRanked.clanOneWins;
@@ -73,5 +119,5 @@ const tryFindWinner = async ({ clanWarResultRanked }) => {
 module.exports = {
   startNextResultRanked,
   getOngoingResultRanked,
-  tryFindWinner,
+  tryEndClanWar,
 };

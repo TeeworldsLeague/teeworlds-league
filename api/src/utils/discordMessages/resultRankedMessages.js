@@ -11,7 +11,7 @@ const {
   voteBlue,
   updateAllStatsResultRanked,
   arePlayersVotedRed,
-  deleteResultRankedDiscord,
+  deleteResultDiscord,
   arePlayersVotedBlue,
   arePlayersVotedCancel,
   voteBanPickStep,
@@ -20,6 +20,7 @@ const {
   readyClanWar,
 } = require("../resultRanked");
 const QueueModel = require("../../models/queue");
+const ClanWarResultRankedModel = require("../../models/clanWarResultRanked");
 const {
   findQueueByInteraction,
   findResultRankedByInteraction,
@@ -27,7 +28,7 @@ const {
   findUserByInteraction,
   findMapByInteraction,
 } = require("./interactionHelper");
-const { getOngoingResultRanked, startNextResultRanked } = require("../clanWarResultRanked");
+const { getOngoingResultRanked, startNextResultRanked, tryEndClanWar } = require("../clanWarResultRanked");
 
 const formatPlayersByClan = ({ queue }) => {
   const { players, numberOfPlayersPerTeam } = queue;
@@ -523,6 +524,24 @@ const discordPrivateMessageNewQueue = ({ resultRanked, voiceChannelInfo = null }
   };
 };
 
+const discordMessageClanWarBilanVotes = async ({ clanWarResultRanked }) => {
+  const { pickedMaps, bannedMaps } = clanWarResultRanked;
+
+  const embed = new EmbedBuilder()
+    .setTitle("🏆 Clan War Bilan Votes 🏆")
+    .setDescription("Bilan of the votes for the clan war")
+    .setColor(0x0099ff)
+    .addFields({
+      name: "Picked Maps",
+      value: pickedMaps.map((map) => map.name).join("\n"),
+    })
+    .setTimestamp();
+
+  return {
+    embed: embed,
+  };
+};
+
 const discordMessageClanWarOngoing = async ({ clanWarResultRanked }) => {
   const resOngoingResultRanked = await getOngoingResultRanked({ clanWarResultRanked });
   if (!resOngoingResultRanked.ok) return resOngoingResultRanked;
@@ -637,6 +656,49 @@ const formatCancelVotes = ({ resultRanked }) => {
 
 const createButton = ({ customId, label, style }) => {
   return new ButtonBuilder().setCustomId(customId).setLabel(label).setStyle(style);
+};
+
+const handleClanWarAfterVote = async ({ resultRanked }) => {
+  if (!resultRanked.clanWar) {
+    return { ok: true };
+  }
+
+  const clanWarResultRanked = await ClanWarResultRankedModel.findById(resultRanked.resultRankedClanWarId);
+  if (!clanWarResultRanked) {
+    return { ok: true };
+  }
+
+  const playersWinner = resultRanked.winnerSide === "red" ? resultRanked.redPlayers : resultRanked.bluePlayers;
+  const clanWinnerId = playersWinner[0].clanId;
+
+  clanWarResultRanked.clanOneWins =
+    clanWinnerId.toString() === clanWarResultRanked.clanOneId?.toString() ? clanWarResultRanked.clanOneWins + 1 : clanWarResultRanked.clanOneWins;
+  clanWarResultRanked.clanTwoWins =
+    clanWinnerId.toString() === clanWarResultRanked.clanTwoId?.toString() ? clanWarResultRanked.clanTwoWins + 1 : clanWarResultRanked.clanTwoWins;
+  await clanWarResultRanked.save();
+
+  const resTryEndClanWar = await tryEndClanWar({ clanWarResultRanked });
+  if (!resTryEndClanWar.ok) return resTryEndClanWar;
+  const { clanWarResultRanked: newClanWarResultRanked } = resTryEndClanWar.data;
+  if (newClanWarResultRanked.freezed) {
+    await deleteResultDiscord({ result: clanWarResultRanked });
+    return { ok: true };
+  }
+
+  const resStartNextResultRanked = await startNextResultRanked({ clanWarResultRanked });
+  if (!resStartNextResultRanked.ok) return resStartNextResultRanked;
+
+  const { resultRanked: newResultRanked } = resStartNextResultRanked.data;
+  const newDiscordMessage = await discordMessageResultRanked({ resultRanked: newResultRanked });
+
+  const resSendMessage = await discordService.sendMessage({
+    channelId: newResultRanked.textChannelDisplayResultId,
+    ...newDiscordMessage,
+  });
+  newResultRanked.messageResultId = resSendMessage.data.message.id;
+  await newResultRanked.save();
+
+  return { ok: true };
 };
 
 // CALLBACKS
@@ -855,11 +917,23 @@ const voteBanPickStepButtonCallBack = async (interaction) => {
     interaction.reply({ content: `You have voted for ${map.name} !`, flags: [MessageFlags.Ephemeral] });
 
     if (clanWarResultRanked.currentBanPickStep > clanWarResultRanked.maxStep) {
-      await discordService.updateMessage({
+      await discordService.sendMessage({
         channelId: clanWarResultRanked.textChannelDisplayResultId,
-        messageId: clanWarResultRanked.messageBanPickStepId,
+        ...(await discordMessageClanWarBilanVotes({ clanWarResultRanked })),
+      });
+
+      const resSendMessage = await discordService.sendMessage({
+        channelId: clanWarResultRanked.textChannelDisplayResultId,
         ...(await discordMessageClanWarOngoing({ clanWarResultRanked })),
       });
+      clanWarResultRanked.messageResultId = resSendMessage.data.message.id;
+      await clanWarResultRanked.save();
+
+      await discordService.deleteMessage({
+        channelId: clanWarResultRanked.textChannelDisplayResultId,
+        messageId: clanWarResultRanked.messageBanPickStepId,
+      });
+
       return;
     }
 
@@ -895,7 +969,7 @@ const cancelResultRankedButtonCallBack = async (interaction) => {
 
       await updateAllStatsResultRanked(resultRanked);
 
-      await deleteResultRankedDiscord({ resultRanked });
+      await deleteResultDiscord({ result: resultRanked });
 
       await discordService.sendMessage({
         channelId: resultRanked.textChannelDisplayFinalResultId,
@@ -937,12 +1011,31 @@ const voteRedResultRankedButtonCallBack = async (interaction) => {
 
       await updateAllStatsResultRanked(resultRanked);
 
-      await deleteResultRankedDiscord({ resultRanked });
+      if (!resultRanked.clanWar) {
+        await deleteResultDiscord({ result: resultRanked });
+      }
 
       await discordService.sendMessage({
         channelId: resultRanked.textChannelDisplayFinalResultId,
         ...(await discordMessageResultRanked({ resultRanked })),
       });
+
+      if (!resultRanked.clanWar) {
+        const queue = await QueueModel.findById(resultRanked.queueId);
+        if (queue && queue.textChannelDisplayClassementId) {
+          await discordService.updateMessage({
+            messageId: queue.messageClassementId,
+            channelId: queue.textChannelDisplayClassementId,
+            ...(await discordMessageClassement({ queue })),
+          });
+        }
+      }
+
+      if (resultRanked.clanWar) {
+        const resHandleClanWar = await handleClanWarAfterVote({ resultRanked });
+        if (!resHandleClanWar.ok) return resHandleClanWar;
+        return;
+      }
 
       return;
     }
@@ -953,15 +1046,6 @@ const voteRedResultRankedButtonCallBack = async (interaction) => {
       messageId: resultRanked.messageResultId,
       ...discordMessage,
     });
-
-    const queue = await QueueModel.findById(resultRanked.queueId);
-    if (queue && queue.textChannelDisplayClassementId) {
-      await discordService.updateMessage({
-        messageId: queue.messageClassementId,
-        channelId: queue.textChannelDisplayClassementId,
-        ...(await discordMessageClassement({ queue })),
-      });
-    }
   } catch (error) {
     console.error(error);
   }
@@ -987,21 +1071,28 @@ const voteBlueResultRankedButtonCallBack = async (interaction) => {
       resultRanked.redScore = 0;
 
       await updateAllStatsResultRanked(resultRanked);
-
-      await deleteResultRankedDiscord({ resultRanked });
+      await deleteResultDiscord({ result: resultRanked });
 
       await discordService.sendMessage({
         channelId: resultRanked.textChannelDisplayFinalResultId,
         ...(await discordMessageResultRanked({ resultRanked })),
       });
 
-      const queue = await QueueModel.findById(resultRanked.queueId);
-      if (queue && queue.textChannelDisplayClassementId) {
-        await discordService.updateMessage({
-          messageId: queue.messageClassementId,
-          channelId: queue.textChannelDisplayClassementId,
-          ...(await discordMessageClassement({ queue })),
-        });
+      if (!resultRanked.clanWar) {
+        const queue = await QueueModel.findById(resultRanked.queueId);
+        if (queue && queue.textChannelDisplayClassementId) {
+          await discordService.updateMessage({
+            messageId: queue.messageClassementId,
+            channelId: queue.textChannelDisplayClassementId,
+            ...(await discordMessageClassement({ queue })),
+          });
+        }
+      }
+
+      if (resultRanked.clanWar) {
+        const resHandleClanWar = await handleClanWarAfterVote({ resultRanked });
+        if (!resHandleClanWar.ok) return resHandleClanWar;
+        return;
       }
 
       return;

@@ -101,6 +101,7 @@ const createGameFromQueueWithoutLock = async ({ queue }) => {
 
       guildId: queue.guildId,
       categoryQueueId: queue.categoryQueueId,
+      textChannelDisplayFinalResultId: queue.textChannelDisplayResultsId,
     };
 
     const newClanWarResultRanked = await ClanWarResultRankedModel.create(newClanWarResultRankedObj);

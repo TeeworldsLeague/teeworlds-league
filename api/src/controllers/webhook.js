@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { catchErrors, updateStatResult } = require("../utils");
 const { WEBHOOK_TOKEN, WEBHOOK_RANKED_TOKEN } = require("../config");
-const { updateAllStatsResultRanked, parseWebhookMessage, deleteResultDiscord } = require("../utils/resultRanked");
+const { updateAllStatsResultRanked, parseWebhookMessage, deleteResultRankedDiscord } = require("../utils/resultRanked");
 const WebhookModel = require("../models/webhooks");
 const { discordMessageResultRanked, discordMessageClassement } = require("../utils/discordMessages").resultRankedMessages;
 const discordService = require("../services/discordService");
@@ -47,7 +47,7 @@ router.post(
       await webhook.save();
       return;
     }
-    const resDeleteResultRanked = await deleteResultDiscord({ result: resultRanked });
+    const resDeleteResultRanked = await deleteResultRankedDiscord({ resultRanked });
     if (!resDeleteResultRanked.ok) {
       webhook.ok = false;
       webhook.endpointResult = JSON.stringify(resDeleteResultRanked);

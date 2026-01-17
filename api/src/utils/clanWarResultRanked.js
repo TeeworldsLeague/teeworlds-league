@@ -1,6 +1,8 @@
 const ResultRankedModel = require("../models/resultRanked");
 const MapModel = require("../models/map");
 const ClanRankedModel = require("../models/clanRanked");
+const discordService = require("../services/discordService");
+const { freeMutexWithId } = require("./mutex");
 
 const startNextResultRanked = async ({ clanWarResultRanked }) => {
   const pickedMaps = clanWarResultRanked.pickedMaps;
@@ -48,7 +50,7 @@ const startNextResultRanked = async ({ clanWarResultRanked }) => {
     guildId: clanWarResultRanked.guildId,
     categoryQueueId: clanWarResultRanked.categoryQueueId,
     textChannelDisplayResultId: clanWarResultRanked.textChannelDisplayResultId,
-    textChannelDisplayFinalResultId: clanWarResultRanked.textChannelDisplayResultId,
+    textChannelDisplayFinalResultId: clanWarResultRanked.textChannelDisplayFinalResultId,
     messageReadyId: clanWarResultRanked.messageReadyId,
     messageResultId: clanWarResultRanked.messageResultId,
   });
@@ -116,8 +118,27 @@ const tryFindWinner = async ({ clanWarResultRanked }) => {
   return { ok: true, data: { winner: null } };
 };
 
+const deleteClanWarResultRankedDiscord = async ({ clanWarResultRanked }) => {
+  if (!clanWarResultRanked.guildId) return { ok: true };
+
+  await discordService.deleteChannel({ channelId: clanWarResultRanked.textChannelDisplayResultId });
+  clanWarResultRanked.textChannelDisplayResultId = null;
+
+  await discordService.deleteChannel({ channelId: clanWarResultRanked.voiceClanOneChannelId });
+  clanWarResultRanked.voiceClanOneChannelId = null;
+
+  await discordService.deleteChannel({ channelId: clanWarResultRanked.voiceClanTwoChannelId });
+  clanWarResultRanked.voiceClanTwoChannelId = null;
+
+  discordService.unregisterButtonCallback(clanWarResultRanked.readyButtonId);
+
+  await freeMutexWithId(clanWarResultRanked._id.toString());
+  return { ok: true };
+};
+
 module.exports = {
   startNextResultRanked,
   getOngoingResultRanked,
   tryEndClanWar,
+  deleteClanWarResultRankedDiscord,
 };

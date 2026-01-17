@@ -811,26 +811,28 @@ const voteBlue = async ({ resultRanked, user }) => {
   return { ok: true, data: { resultRanked, user } };
 };
 
-const deleteResultDiscord = async ({ result }) => {
-  if (!result.guildId) return { ok: true };
+const deleteResultRankedDiscord = async ({ resultRanked }) => {
+  if (!resultRanked.guildId) return { ok: true };
 
-  await discordService.deleteMessage({ channelId: result.textChannelDisplayFinalResultId, messageId: result.messageResultId });
-  result.messageResultId = null;
-
-  if (!result.clanWar) {
-    await discordService.deleteChannel({ channelId: result.textChannelDisplayResultId });
-    result.textChannelDisplayResultId = null;
-
-    await discordService.deleteChannel({ channelId: result.voiceRedChannelId });
-    result.voiceRedChannelId = null;
-
-    await discordService.deleteChannel({ channelId: result.voiceBlueChannelId });
-    result.voiceBlueChannelId = null;
-
-    discordService.unregisterButtonCallback(result.readyButtonId);
+  if (resultRanked.messageResultId) {
+    await discordService.deleteMessage({ channelId: resultRanked.textChannelDisplayResultId, messageId: resultRanked.messageResultId });
+    resultRanked.messageResultId = null;
   }
 
-  await freeMutexWithId(result._id.toString());
+  if (!resultRanked.clanWar) {
+    await discordService.deleteChannel({ channelId: resultRanked.textChannelDisplayResultId });
+    resultRanked.textChannelDisplayResultId = null;
+
+    await discordService.deleteChannel({ channelId: result.voiceRedChannelId });
+    resultRanked.voiceRedChannelId = null;
+
+    await discordService.deleteChannel({ channelId: resultRanked.voiceBlueChannelId });
+    result.voiceBlueChannelId = null;
+
+    discordService.unregisterButtonCallback(resultRanked.readyButtonId);
+  }
+
+  await freeMutexWithId(resultRanked._id.toString());
 
   return { ok: true };
 };
@@ -849,7 +851,7 @@ module.exports = {
   arePlayersReadyClanWar,
   join,
   leave,
-  deleteResultDiscord,
+  deleteResultRankedDiscord,
   voteCancel,
   voteRed,
   voteBlue,

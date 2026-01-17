@@ -11,7 +11,7 @@ const {
   voteBlue,
   updateAllStatsResultRanked,
   arePlayersVotedRed,
-  deleteResultDiscord,
+  deleteResultRankedDiscord,
   arePlayersVotedBlue,
   arePlayersVotedCancel,
   voteBanPickStep,
@@ -28,7 +28,7 @@ const {
   findUserByInteraction,
   findMapByInteraction,
 } = require("./interactionHelper");
-const { getOngoingResultRanked, startNextResultRanked, tryEndClanWar } = require("../clanWarResultRanked");
+const { getOngoingResultRanked, startNextResultRanked, tryEndClanWar, deleteClanWarResultRankedDiscord } = require("../clanWarResultRanked");
 
 const formatPlayersByClan = ({ queue }) => {
   const { players, numberOfPlayersPerTeam } = queue;
@@ -681,7 +681,7 @@ const handleClanWarAfterVote = async ({ resultRanked }) => {
   if (!resTryEndClanWar.ok) return resTryEndClanWar;
   const { clanWarResultRanked: newClanWarResultRanked } = resTryEndClanWar.data;
   if (newClanWarResultRanked.freezed) {
-    await deleteResultDiscord({ result: clanWarResultRanked });
+    await deleteClanWarResultRankedDiscord({ clanWarResultRanked });
     return { ok: true };
   }
 
@@ -969,7 +969,7 @@ const cancelResultRankedButtonCallBack = async (interaction) => {
 
       await updateAllStatsResultRanked(resultRanked);
 
-      await deleteResultDiscord({ result: resultRanked });
+      await deleteResultRankedDiscord({ resultRanked });
 
       await discordService.sendMessage({
         channelId: resultRanked.textChannelDisplayFinalResultId,
@@ -1012,7 +1012,7 @@ const voteRedResultRankedButtonCallBack = async (interaction) => {
       await updateAllStatsResultRanked(resultRanked);
 
       if (!resultRanked.clanWar) {
-        await deleteResultDiscord({ result: resultRanked });
+        await deleteResultRankedDiscord({ resultRanked });
       }
 
       await discordService.sendMessage({
@@ -1071,7 +1071,7 @@ const voteBlueResultRankedButtonCallBack = async (interaction) => {
       resultRanked.redScore = 0;
 
       await updateAllStatsResultRanked(resultRanked);
-      await deleteResultDiscord({ result: resultRanked });
+      await deleteResultRankedDiscord({ resultRanked });
 
       await discordService.sendMessage({
         channelId: resultRanked.textChannelDisplayFinalResultId,

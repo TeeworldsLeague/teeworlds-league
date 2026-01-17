@@ -6,6 +6,7 @@ const { updateAllStatsResultRanked, parseWebhookMessage, deleteResultRankedDisco
 const WebhookModel = require("../models/webhooks");
 const { discordMessageResultRanked, discordMessageClassement } = require("../utils/discordMessages").resultRankedMessages;
 const discordService = require("../services/discordService");
+const { handleClanWarAfterVote } = require("../utils/discordMessages/resultRankedMessages");
 
 router.post(
   "/resultRanked/:webhookToken",
@@ -62,13 +63,25 @@ router.post(
         ...discordMessage,
       });
 
-      const queue = await QueueModel.findById(resultRanked.queueId);
-      if (queue) {
-        await discordService.updateMessage({
-          channelId: queue.textChannelDisplayClassementId,
-          messageId: queue.messageClassementId,
-          ...(await discordMessageClassement({ queue })),
-        });
+      if (!resultRanked.clanWar) {
+        const queue = await QueueModel.findById(resultRanked.queueId);
+        if (queue) {
+          await discordService.updateMessage({
+            channelId: queue.textChannelDisplayClassementId,
+            messageId: queue.messageClassementId,
+            ...(await discordMessageClassement({ queue })),
+          });
+        }
+      }
+
+      if (resultRanked.clanWar) {
+        const resHandleClanWar = await handleClanWarAfterVote({ resultRanked });
+        if (!resHandleClanWar.ok) {
+          webhook.ok = false;
+          webhook.endpointResult = JSON.stringify(resHandleClanWar);
+          await webhook.save();
+          return;
+        }
       }
     }
 

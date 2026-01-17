@@ -1010,10 +1010,7 @@ const voteRedResultRankedButtonCallBack = async (interaction) => {
       resultRanked.blueScore = 0;
 
       await updateAllStatsResultRanked(resultRanked);
-
-      if (!resultRanked.clanWar) {
-        await deleteResultRankedDiscord({ resultRanked });
-      }
+      await deleteResultRankedDiscord({ resultRanked });
 
       await discordService.sendMessage({
         channelId: resultRanked.textChannelDisplayFinalResultId,
@@ -1118,6 +1115,8 @@ module.exports = {
   // Result Ranked
   discordMessageResultRanked,
   discordMessageResultNotReady,
+
+  handleClanWarAfterVote,
 
   // Callbacks
   readyButtonCallBack,

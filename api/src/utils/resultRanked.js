@@ -49,10 +49,13 @@ const parseWebhookMessage = async (content) => {
   const gameType = content.game_type;
   if (gameType !== "gctf") return { ok: false, errorCode: "INVALID_GAME_TYPE" };
 
-  const obj = {};
+  const map = await detectMapFromServer(content.map);
+  if (!map) return { ok: false, errorCode: "MAP_NOT_FOUND" };
 
+  const obj = {};
   obj.date = new Date();
-  obj.map = detectMapFromServer(content.map);
+  obj.mapId = map._id;
+  obj.mapName = map.name;
   obj.scoreLimit = content.score_limit;
   obj.timeLimit = content.time_limit;
 
@@ -76,6 +79,9 @@ const parseWebhookMessage = async (content) => {
     objPlayer.userName = player.name;
     objPlayer.avatar = user.avatar;
 
+    objPlayer.clanId = user.clanRankedId;
+    objPlayer.clanName = user.clanRankedName;
+
     objPlayer.score = player.score;
     objPlayer.kills = player.kills;
     objPlayer.deaths = player.deaths;
@@ -96,6 +102,9 @@ const parseWebhookMessage = async (content) => {
     objPlayer.userName = player.name;
     objPlayer.avatar = user.avatar;
 
+    objPlayer.clanId = user.clanRankedId;
+    objPlayer.clanName = user.clanRankedName;
+
     objPlayer.score = player.score;
     objPlayer.kills = player.kills;
     objPlayer.deaths = player.deaths;
@@ -108,13 +117,20 @@ const parseWebhookMessage = async (content) => {
 
   obj.mode = `${redPlayers.length}v${bluePlayers.length}`;
 
-  const resultRanked = await ResultRankedModel.findOne({
-    map: obj.map,
+  const searchObj = {
+    mapId: obj.mapId,
     mode: obj.mode,
-    redPlayers: { $elemMatch: { userName: redPlayers.map((player) => player.userName) } },
-    bluePlayers: { $elemMatch: { userName: bluePlayers.map((player) => player.userName) } },
     freezed: false,
-  });
+  };
+
+  if (redPlayers.length > 0) {
+    searchObj.redPlayers = { $elemMatch: { userName: redPlayers.map((player) => player.userName) } };
+  }
+  if (bluePlayers.length > 0) {
+    searchObj.bluePlayers = { $elemMatch: { userName: bluePlayers.map((player) => player.userName) } };
+  }
+
+  const resultRanked = await ResultRankedModel.findOne(searchObj);
   if (!resultRanked) return { ok: false, errorCode: "RESULT_RANKED_NOT_FOUND" };
 
   for (const player of redPlayers) {

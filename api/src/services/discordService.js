@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits, ChannelType, Events, ActionRowBuilder, Button
 const { DISCORD_CLIENT_ID, DISCORD_BOT_TOKEN } = require("../config");
 const enumErrorCode = require("../enums/enumErrorCode");
 
-const { runExclusiveWithId, freeMutexWithId } = require('../utils/mutex');
+const { runExclusiveWithId, freeMutexWithId } = require("../utils/mutex");
 
 class DiscordThrottledMessageUpdateHandler {
   constructor(client, channelId, messageId, delay_ms = 500) {
@@ -102,7 +102,6 @@ class DiscordThrottledMessageUpdaterManager {
   }
 }
 
-
 class DiscordService {
   constructor() {
     this.client = null;
@@ -141,7 +140,9 @@ class DiscordService {
         if (callback) {
           const id = interaction.customId.split("_")[0]; // note: this could be a queue or a resultRanked id!
           try {
-            await runExclusiveWithId( id, async () => { callback(interaction) });
+            await runExclusiveWithId(id, async () => {
+              callback(interaction);
+            });
           } catch (error) {
             console.error(`Error handling button interaction ${interaction.customId}:`, error);
             if (!interaction.replied && !interaction.deferred) {
@@ -186,6 +187,16 @@ class DiscordService {
       return { ok: true, data: { guilds } };
     } catch (error) {
       console.error("Failed to get guilds:", error);
+      return { ok: false, errorCode: enumErrorCode.SERVER_ERROR };
+    }
+  }
+
+  async getGuild({ guildId }) {
+    try {
+      const guild = await this.client.guilds.fetch(guildId);
+      return { ok: true, data: { guild } };
+    } catch (error) {
+      console.error(`Failed to get guild ${guildId}:`, error);
       return { ok: false, errorCode: enumErrorCode.SERVER_ERROR };
     }
   }
@@ -327,7 +338,6 @@ class DiscordService {
 
   async updateMessage({ channelId, messageId, message: newMessage, embed = null, buttons = null }) {
     try {
-
       const updateOptions = {
         content: newMessage,
       };
@@ -336,14 +346,19 @@ class DiscordService {
         updateOptions.embeds = [embed];
       }
 
-      if (buttons) {
-        const buttonRow = new ActionRowBuilder().addComponents(buttons);
-        updateOptions.components = [buttonRow];
+      if (buttons !== null && buttons !== undefined) {
+        if (buttons.length === 0) {
+          // Explicitly set empty components array to remove all buttons
+          updateOptions.components = [];
+        } else {
+          const buttonRow = new ActionRowBuilder().addComponents(buttons);
+          updateOptions.components = [buttonRow];
+        }
       }
 
       this.messageUpdateManager.queueUpdate(channelId, messageId, updateOptions); // note that this is throttled and may not happen immediately!
 
-      return { ok: true, data: { message } };
+      return { ok: true };
     } catch (error) {
       console.error(`Failed to update message ${messageId}:`, error);
       return { ok: false, errorCode: enumErrorCode.SERVER_ERROR };
@@ -365,7 +380,7 @@ class DiscordService {
     }
   }
 
-  async createVoiceChannel({ guildId, name, categoryId = null }) {
+  async createVoiceChannel({ guildId, name, categoryId = null, permissionOverwrites = null }) {
     const createOptions = {
       name: name,
       type: ChannelType.GuildVoice,
@@ -373,6 +388,10 @@ class DiscordService {
 
     if (categoryId) {
       createOptions.parent = categoryId;
+    }
+
+    if (permissionOverwrites) {
+      createOptions.permissionOverwrites = permissionOverwrites;
     }
 
     const guild = await this.client.guilds.fetch(guildId);

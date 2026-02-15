@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const { enumModes, enumEloMode } = require("../enums/enumModes");
 const ObjectId = mongoose.Types.ObjectId;
 
-const MODELNAME = "resultRanked";
+const MODELNAME = "clanWarResultRanked";
 
 const PlayerSchema = new mongoose.Schema({
   userId: { type: ObjectId },
@@ -12,15 +12,6 @@ const PlayerSchema = new mongoose.Schema({
   clanId: { type: ObjectId },
   clanName: { type: String, trim: true },
 
-  score: { type: Number, default: 0 },
-  kills: { type: Number, default: 0 },
-  deaths: { type: Number, default: 0 },
-  flags: { type: Number, default: 0 },
-  flagsTouches: { type: Number, default: 0 },
-
-  eloBefore: { type: Number, default: 1000 },
-  eloAfter: { type: Number, default: 1000 },
-
   isReady: { type: Boolean, default: false },
   voteCancel: { type: Boolean, default: false },
   voteRed: { type: Boolean, default: false },
@@ -29,78 +20,86 @@ const PlayerSchema = new mongoose.Schema({
   discordId: { type: String, trim: true },
 });
 
+const MapSchema = new mongoose.Schema({
+  _id: { type: ObjectId },
+  mapId: { type: ObjectId },
+  name: { type: String, trim: true },
+
+  clanWinnerId: { type: ObjectId },
+  clanWinnerName: { type: String, trim: true },
+  clanLooserId: { type: ObjectId },
+  clanLooserName: { type: String, trim: true },
+
+  votedBy: { type: [ObjectId], default: [] },
+
+  resultRankedId: { type: ObjectId, ref: "resultRanked", default: null },
+});
+
 const Schema = new mongoose.Schema(
   {
     queueId: { type: ObjectId },
     numberFromQueue: { type: Number, default: 0 },
     queueName: { type: String, trim: true },
+    clanWar: { type: Boolean, default: true },
 
     modeId: { type: ObjectId },
     modeName: { type: String, trim: true },
 
-    clanWar: { type: Boolean, default: false },
-    resultRankedClanWarId: { type: ObjectId },
+    clanOnePlayers: { type: [PlayerSchema], default: [] },
+    clanOneId: { type: ObjectId },
+    clanOneName: { type: String, trim: true },
+    clanOneEloBefore: { type: Number, default: 1000 },
+    clanOneEloAfter: { type: Number, default: 1000 },
+    clanOneEloGain: { type: Number, default: 0 },
+    clanOneWins: { type: Number, default: 0 },
 
-    tournamentId: { type: ObjectId },
-    tournamentName: { type: String, trim: true },
+    clanTwoPlayers: { type: [PlayerSchema], default: [] },
+    clanTwoId: { type: ObjectId },
+    clanTwoName: { type: String, trim: true },
+    clanTwoEloBefore: { type: Number, default: 1000 },
+    clanTwoEloAfter: { type: Number, default: 1000 },
+    clanTwoEloGain: { type: Number, default: 0 },
+    clanTwoWins: { type: Number, default: 0 },
+
+    winnerId: { type: ObjectId },
+    winnerName: { type: String, trim: true },
+    looserId: { type: ObjectId },
+    looserName: { type: String, trim: true },
+
+    banPickSteps: { type: [String], default: ["PICK", "PICK", "BAN", "BAN", "PICK"] },
+    maxStep: { type: Number, default: 5 },
+    currentBanPickStep: { type: Number, default: 1 },
+    clanStepId: { type: ObjectId },
+    clanStepName: { type: String, trim: true },
+
+    maps: { type: [MapSchema], default: [] },
+    pendingMaps: { type: [MapSchema], default: [] },
+    pickedMaps: { type: [MapSchema], default: [] },
+    bannedMaps: { type: [MapSchema], default: [] },
+    numberMapsToWin: { type: Number, default: 2 },
+    currentMapIndex: { type: Number, default: 0 },
 
     date: { type: Date, default: Date.now },
     mode: { type: String, trim: true, default: enumModes.twoVTwo },
     eloMode: { type: String, enum: enumEloMode, trim: true },
-
-    mapId: { type: ObjectId },
-    mapName: { type: String, trim: true },
-
-    scoreLimit: { type: Number, default: 1000 },
-    timeLimit: { type: Number, default: 0 },
-    isForfeit: { type: Boolean, default: false },
-
-    totalTimeSeconds: { type: Number, default: 0 },
-    totalTimeMinutes: { type: Number, default: 0 },
-    totalTime: { type: Number, default: 0 },
-
-    winnerId: { type: ObjectId, trim: true },
-    winnerName: { type: String, trim: true },
-    winnerSide: { type: String, trim: true, enum: ["red", "blue", "", null] },
-
-    looserId: { type: ObjectId, trim: true },
-    looserName: { type: String, trim: true },
-    looserSide: { type: String, trim: true },
-
-    blueScore: { type: Number, default: 0 },
-    redScore: { type: Number, default: 0 },
-
-    redPlayers: { type: [PlayerSchema], default: [] },
-    bluePlayers: { type: [PlayerSchema], default: [] },
-
-    eloGain: { type: Number, default: 0 },
-    eloLoss: { type: Number, default: 0 },
-    redEloBefore: { type: Number, default: 1000 },
-    blueEloBefore: { type: Number, default: 1000 },
-    redEloGain: { type: Number, default: 0 },
-    blueEloGain: { type: Number, default: 0 },
 
     hasBeenCanceled: { type: Boolean, default: false },
 
     freezed: { type: Boolean, default: false },
     freezedAt: { type: Date },
 
-    hasBeenVoted: { type: Boolean, default: false },
-    hasBeenVotedAt: { type: Date },
-
     // Discord
     guildId: { type: String, trim: true },
     categoryQueueId: { type: String, trim: true },
-    textChannelDisplayFinalResultId: { type: String, trim: true },
     textChannelDisplayResultId: { type: String, trim: true },
-    messageReadyId: { type: String, trim: true },
-    messageResultId: { type: String, trim: true },
+    textChannelDisplayFinalResultId: { type: String, trim: true },
     readyButtonId: { type: String, trim: true },
-    voiceRedChannelId: { type: String, trim: true },
-    voiceBlueChannelId: { type: String, trim: true },
-    voteCancelButtonId: { type: String, trim: true },
-    voteRedButtonId: { type: String, trim: true },
-    voteBlueButtonId: { type: String, trim: true },
+    messageReadyId: { type: String, trim: true },
+    messageBanPickStepId: { type: String, trim: true },
+    voiceClanOneChannelId: { type: String, trim: true },
+    voiceClanTwoChannelId: { type: String, trim: true },
+
+    messageResultId: { type: String, trim: true },
   },
   {
     timestamps: true,

@@ -1,20 +1,27 @@
 const mongoose = require("mongoose");
-const modes = require("../enums/enumModes");
-const { enumMaps } = require("../enums/enumMaps");
-const { enumModes, enumNumberOfPlayersForGame } = require("../enums/enumModes");
+const { enumModes, enumNumberOfPlayersForGame, enumEloMode } = require("../enums/enumModes");
 const ObjectId = mongoose.Types.ObjectId;
 
 const MODELNAME = "queue";
+
+const MapSchema = new mongoose.Schema({
+  _id: { type: ObjectId },
+  mapId: { type: ObjectId },
+  name: { type: String, trim: true },
+});
 
 const PlayerSchema = new mongoose.Schema({
   userId: { type: ObjectId },
   userName: { type: String, trim: true },
   avatar: { type: String, trim: true },
+
   clanId: { type: ObjectId },
   clanName: { type: String, trim: true },
-  discordId: { type: String, trim: true },
+
   elo: { type: Number },
   joinedAt: { type: Date, default: Date.now },
+
+  discordId: { type: String, trim: true },
 });
 
 const Schema = new mongoose.Schema(
@@ -24,11 +31,15 @@ const Schema = new mongoose.Schema(
     players: { type: [PlayerSchema], default: [] },
     numberOfPlayersForGame: { type: Number, default: enumNumberOfPlayersForGame.twoVTwo },
     numberOfPlayersPerTeam: { type: Number, default: 2 },
-    maps: { type: [String], default: [enumMaps.ctf_5, enumMaps.ctf_duskwood, enumMaps.ctf_cryochasm, enumMaps.ctf_mars, enumMaps.ctf_moon] },
+    maps: { type: [MapSchema], default: [] },
     mode: { type: String, enum: enumModes, default: enumModes.twoVTwo },
+
+    clanWar: { type: Boolean, default: false },
+    banPickSteps: { type: [String], default: ["PICK", "PICK", "BAN", "BAN", "PICK"] },
 
     modeId: { type: ObjectId },
     modeName: { type: String, trim: true },
+    eloMode: { type: String, enum: enumEloMode, trim: true },
 
     numberOfGames: { type: Number, default: 0 },
 
@@ -61,6 +72,7 @@ Schema.methods.responseModel = function () {
     numberOfPlayersPerTeam: this.numberOfPlayersPerTeam,
     numberOfGames: this.numberOfGames,
     guildId: this.guildId,
+    clanWar: this.clanWar,
   };
 };
 

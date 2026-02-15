@@ -8,6 +8,7 @@ const fs = require("fs");
 const DiscordService = require("./services/discordService");
 const QueueModel = require("./models/queue");
 const ResultRankedModel = require("./models/resultRanked");
+const ClanWarResultRankedModel = require("./models/clanWarResultRanked");
 
 const { createGameFromQueue } = require("./utils/queue");
 
@@ -21,6 +22,7 @@ const {
   voteRedResultRankedButtonCallBack,
   voteBlueResultRankedButtonCallBack,
 } = require("./utils/discordMessages");
+const { readyButtonClanWarCallBack } = require("./utils/discordMessages/resultRankedMessages");
 const app = express();
 
 if (ENVIRONMENT === "development") {
@@ -46,6 +48,7 @@ app.get("/", async (req, res) => {
 
 app.use("/user", require("./controllers/user"));
 app.use("/clan", require("./controllers/clan"));
+app.use("/clanRanked", require("./controllers/clanRanked"));
 app.use("/result", require("./controllers/result"));
 app.use("/stat", require("./controllers/stat"));
 app.use("/webhook", require("./controllers/webhook"));
@@ -57,6 +60,8 @@ app.use("/resultRanked", require("./controllers/resultRanked"));
 app.use("/statRanked", require("./controllers/statRanked"));
 app.use("/mode", require("./controllers/mode"));
 app.use("/discord", require("./controllers/discord"));
+app.use("/tournament", require("./controllers/tournament"));
+app.use("/map", require("./controllers/map"));
 
 if (ENVIRONMENT === "production") {
   var https = require("https");
@@ -90,13 +95,18 @@ DiscordService.init().then(() => {
       if (resultRanked.voteBlueButtonId) discordService.registerButtonCallback(resultRanked.voteBlueButtonId, voteBlueResultRankedButtonCallBack);
     }
 
+    const clanWarResultRankeds = await ClanWarResultRankedModel.find({ freezed: false });
+    for (const clanWarResultRanked of clanWarResultRankeds) {
+      if (clanWarResultRanked.readyButtonId) discordService.registerButtonCallback(clanWarResultRanked.readyButtonId, readyButtonClanWarCallBack);
+    }
+
     const createGamesFromQueues = async () => {
       const queues = await QueueModel.find({});
 
       for (const queue of queues) {
         const resCreateGameFromQueue = await createGameFromQueue({ queue });
       }
-    }
+    };
 
     // initialize creation of games from queues every three seconds
     // TODO: call this function when a player joins or leaves a queue instead of using setInterval
@@ -108,42 +118,19 @@ DiscordService.init().then(() => {
   initCallbacksForQueues().then(() => {
     console.log("Callbacks for queues initialized");
   });
-=======
-DiscordService.init().then(async () => {
-  await queueService.onStartup();
-  await resultRankedService.onStartup();
 });
-
 
 async function shutdown() {
-    console.log('Shutting down server...');
-    await queueService.onShutdown();
-    await resultRankedService.onShutdown();
-}
-
-process.on('SIGINT', async () => {
-  console.log('Received SIGINT, shutting down gracefully...');
-  await shutdown();
-});
-
-process.on('SIGTERM', async () => {
-  console.log('Received SIGTERM, shutting down gracefully...');
-  await shutdown();
->>>>>>> a96bcc1 (remove cron and use setInterval in the QueueService)
-});
-
-
-async function shutdown() {
-  console.log('Shutting down server...');
+  console.log("Shutting down server...");
   // TODO: Add any cleanup logic here (e.g., closing queues gracefully)
 }
 
-process.on('SIGINT', async () => {
-  console.log('Received SIGINT, shutting down gracefully...');
+process.on("SIGINT", async () => {
+  console.log("Received SIGINT, shutting down gracefully...");
   await shutdown();
 });
 
-process.on('SIGTERM', async () => {
-  console.log('Received SIGTERM, shutting down gracefully...');
+process.on("SIGTERM", async () => {
+  console.log("Received SIGTERM, shutting down gracefully...");
   await shutdown();
 });

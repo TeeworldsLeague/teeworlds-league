@@ -4,13 +4,13 @@ import { Route, Routes } from "react-router-dom";
 import Detail from "./detail";
 import List from "./list";
 
-const Users = () => {
+const Maps = () => {
   return (
     <Routes>
-      <Route path="/:userId" element={<Detail />} />
+      <Route path="/:id" element={<Detail />} />
       <Route path="" element={<List />} />
     </Routes>
   );
 };
 
-export default Users;
+export default Maps;

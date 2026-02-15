@@ -3,7 +3,8 @@ const StatModel = require("../models/stat");
 const UserModel = require("../models/user");
 const ClanModel = require("../models/clan");
 const SeasonModel = require("../models/season");
-const { enumMapsWithLabel } = require("../enums/enumMaps");
+const { enumEloMode } = require("../enums/enumModes");
+const { detectMapFromServer } = require("./map");
 
 // Generate a random number between 000000 and 999999 and return as string
 function generateEmailcodeValidation() {
@@ -61,7 +62,7 @@ async function unforfeitResult(result) {
 async function updateAllStatsResult(result) {
   await updateStatResult(result);
 
-  await computeEloResult(result);
+  if (result.eloMode === enumEloMode.ELO) await computeEloResult(result);
 
   const allPlayers = result.redPlayers.concat(result.bluePlayers);
   const users = await UserModel.find({ _id: { $in: allPlayers.map((p) => p.userId) } });
@@ -432,7 +433,7 @@ const parseWebhookMessage = async (content) => {
   obj.seasonEndDate = currentSeason.endDate;
 
   obj.date = new Date();
-  obj.map = detectMapFromServer(content.map);
+  obj.map = await detectMapFromServer(content.map);
   obj.scoreLimit = content.score_limit;
   obj.timeLimit = content.time_limit;
 
@@ -460,6 +461,9 @@ const parseWebhookMessage = async (content) => {
     objPlayer.userId = user._id;
     objPlayer.userName = player.name;
     objPlayer.avatar = user.avatar;
+
+    objPlayer.clanId = user.clanRankedId;
+    objPlayer.clanName = user.clanRankedName;
 
     objPlayer.score = player.score;
     objPlayer.kills = player.kills;
@@ -489,6 +493,9 @@ const parseWebhookMessage = async (content) => {
     objPlayer.userId = user._id;
     objPlayer.userName = player.name;
     objPlayer.avatar = user.avatar;
+
+    objPlayer.clanId = user.clanRankedId;
+    objPlayer.clanName = user.clanRankedName;
 
     objPlayer.score = player.score;
     objPlayer.kills = player.kills;

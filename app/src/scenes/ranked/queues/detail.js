@@ -6,13 +6,13 @@ import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { modesWithLabel } from "../../../components/utils";
-import { enumMaps, enumMapsWithLabel } from "../../../enums/enumMaps";
 import MultiPicker from "../../../components/MultiPicker";
 import { FaDiscord } from "react-icons/fa";
 
 const Details = () => {
   const [loading, setLoading] = useState(true);
   const [queue, setQueue] = useState({});
+  const [maps, setMaps] = useState([]);
   const [modes, setModes] = useState([]);
   const [canEdit, setCanEdit] = useState(false);
   const [guilds, setGuilds] = useState([]);
@@ -56,8 +56,15 @@ const Details = () => {
       setModes(data);
     };
 
+    const fetchMaps = async () => {
+      const { ok, data } = await api.post(`/map/search`, {});
+      if (!ok) toast.error("Erreur while fetching maps");
+      setMaps(data);
+    };
+
     fetchBotInviteUrl();
     fetchModes();
+    fetchMaps();
   }, []);
 
   const handleDelete = async () => {
@@ -213,21 +220,32 @@ const Details = () => {
         />
       </div>
       <div className="mb-4">
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={queue.clanWar || false}
+            onChange={(e) => setQueue({ ...queue, clanWar: e.target.checked })}
+            disabled={!canEdit}
+            className="mr-2 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+          />
+          <span className="text-gray-700 text-sm font-bold">Clan War</span>
+        </label>
+      </div>
+      <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="maps">
           Maps
         </label>
         {canEdit ? (
           <MultiPicker
-            items={Object.values(enumMaps)}
-            selectedItems={Object.values(enumMaps).filter((mapValue) => queue.maps?.includes(mapValue))}
+            items={maps.map((map) => ({ value: map._id, label: map.name }))}
+            selectedItems={maps.filter((map) => queue.maps?.map((m) => m._id).includes(map._id)).map((map) => ({ value: map._id, label: map.name }))}
             onSelectionChange={(selectedMaps) => {
-              setQueue({ ...queue, maps: selectedMaps });
+              setQueue({ ...queue, maps: selectedMaps.map((item) => maps.find((m) => m._id === item.value)) });
             }}
-            renderItem={(mapValue, isSelected) => {
-              const mapObj = enumMapsWithLabel.find((m) => m.value === mapValue);
+            renderItem={(mapItem, isSelected) => {
               return (
                 <div className="flex items-center justify-between">
-                  <span>{mapObj?.label || mapValue}</span>
+                  <span>{mapItem.label || mapItem.value}</span>
                   {isSelected && <span className="text-green-500">✓</span>}
                 </div>
               );
@@ -238,10 +256,10 @@ const Details = () => {
         ) : (
           <div className="space-y-2">
             {queue.maps?.map((mapValue) => {
-              const mapObj = enumMapsWithLabel.find((m) => m.value === mapValue);
+              const mapObj = maps.find((m) => m._id === mapValue);
               return (
                 <div key={mapValue} className="bg-gray-100 p-2 rounded">
-                  {mapObj?.label || mapValue}
+                  {mapObj?.name || mapValue}
                 </div>
               );
             })}

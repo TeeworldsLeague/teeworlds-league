@@ -7,7 +7,7 @@ const { detectMapFromServer } = require("./map");
 const discordService = require("../services/discordService");
 
 const { freeMutexWithId } = require("./mutex");
-const { createGameFromQueue } = require("./queue");
+const { enumEloMode } = require("../enums/enumModes");
 
 /*
 {
@@ -49,10 +49,13 @@ const parseWebhookMessage = async (content) => {
   const gameType = content.game_type;
   if (gameType !== "gctf") return { ok: false, errorCode: "INVALID_GAME_TYPE" };
 
-  const obj = {};
+  const map = await detectMapFromServer(content.map);
+  if (!map) return { ok: false, errorCode: "MAP_NOT_FOUND" };
 
+  const obj = {};
   obj.date = new Date();
-  obj.map = detectMapFromServer(content.map);
+  obj.mapId = map._id;
+  obj.mapName = map.name;
   obj.scoreLimit = content.score_limit;
   obj.timeLimit = content.time_limit;
 
@@ -76,6 +79,9 @@ const parseWebhookMessage = async (content) => {
     objPlayer.userName = player.name;
     objPlayer.avatar = user.avatar;
 
+    objPlayer.clanId = user.clanRankedId;
+    objPlayer.clanName = user.clanRankedName;
+
     objPlayer.score = player.score;
     objPlayer.kills = player.kills;
     objPlayer.deaths = player.deaths;
@@ -96,6 +102,9 @@ const parseWebhookMessage = async (content) => {
     objPlayer.userName = player.name;
     objPlayer.avatar = user.avatar;
 
+    objPlayer.clanId = user.clanRankedId;
+    objPlayer.clanName = user.clanRankedName;
+
     objPlayer.score = player.score;
     objPlayer.kills = player.kills;
     objPlayer.deaths = player.deaths;
@@ -108,13 +117,20 @@ const parseWebhookMessage = async (content) => {
 
   obj.mode = `${redPlayers.length}v${bluePlayers.length}`;
 
-  const resultRanked = await ResultRankedModel.findOne({
-    map: obj.map,
+  const searchObj = {
+    mapId: obj.mapId,
     mode: obj.mode,
-    redPlayers: { $elemMatch: { userName: redPlayers.map((player) => player.userName) } },
-    bluePlayers: { $elemMatch: { userName: bluePlayers.map((player) => player.userName) } },
     freezed: false,
-  });
+  };
+
+  if (redPlayers.length > 0) {
+    searchObj.redPlayers = { $elemMatch: { userName: redPlayers.map((player) => player.userName) } };
+  }
+  if (bluePlayers.length > 0) {
+    searchObj.bluePlayers = { $elemMatch: { userName: bluePlayers.map((player) => player.userName) } };
+  }
+
+  const resultRanked = await ResultRankedModel.findOne(searchObj);
   if (!resultRanked) return { ok: false, errorCode: "RESULT_RANKED_NOT_FOUND" };
 
   for (const player of redPlayers) {
@@ -176,7 +192,7 @@ async function updateAllStatsResultRanked(resultRanked) {
 
   await updateStatResultRanked(resultRanked);
 
-  await computeEloResultRanked(resultRanked);
+  if (resultRanked.eloMode === enumEloMode.ELO) await computeEloResultRanked(resultRanked);
 
   const allPlayers = resultRanked.redPlayers.concat(resultRanked.bluePlayers);
   const users = await UserModel.find({ _id: { $in: allPlayers.map((p) => p.userId) } });
@@ -221,12 +237,14 @@ async function updateStatResultRanked(resultRanked) {
 async function updateStatPlayerRanked({ player, mode }) {
   let redResultsRanked = await ResultRankedModel.find({
     redPlayers: { $elemMatch: { userId: player._id } },
+    clanWar: false,
     hasBeenCanceled: false,
     freezed: true,
     modeId: mode._id,
   });
   let blueResultsRanked = await ResultRankedModel.find({
     bluePlayers: { $elemMatch: { userId: player._id } },
+    clanWar: false,
     hasBeenCanceled: false,
     freezed: true,
     modeId: mode._id,
@@ -583,22 +601,47 @@ const ready = async ({ resultRanked, user }) => {
   return { ok: true, data: { resultRanked, user } };
 };
 
+const readyClanWar = async ({ clanWarResultRanked, user }) => {
+  if (!clanWarResultRanked) return { ok: false, message: "Clan war result ranked not found" };
+  if (
+    !clanWarResultRanked.clanOnePlayers.some((player) => player.userId.toString() === user._id.toString()) &&
+    !clanWarResultRanked.clanTwoPlayers.some((player) => player.userId.toString() === user._id.toString())
+  )
+    return { ok: false, message: "Player not in clan war result ranked" };
+
+  clanWarResultRanked.clanOnePlayers.forEach((player) => {
+    if (player.userId.toString() === user._id.toString()) {
+      player.isReady = true;
+    }
+  });
+
+  clanWarResultRanked.clanTwoPlayers.forEach((player) => {
+    if (player.userId.toString() === user._id.toString()) {
+      player.isReady = true;
+    }
+  });
+
+  await clanWarResultRanked.save();
+
+  return { ok: true, data: { clanWarResultRanked, user } };
+};
+
 const join = async ({ queue, user }) => {
   if (!queue) return { ok: false, message: "Queue not found" };
   if (queue.players.some((player) => player.userId.toString() === user._id.toString())) return { ok: false, message: "Player already in queue" };
 
-  const resultRanked = await ResultRankedModel.findOne({
-    freezed: false,
-    $or: [{ "redPlayers.userId": user._id }, { "bluePlayers.userId": user._id }],
-  });
-  if (resultRanked) return { ok: false, message: "You are already in a game" };
+  // const resultRanked = await ResultRankedModel.findOne({
+  //   freezed: false,
+  //   $or: [{ "redPlayers.userId": user._id }, { "bluePlayers.userId": user._id }],
+  // });
+  // if (resultRanked) return { ok: false, message: "You are already in a game" };
 
   const playerObj = {
     userId: user._id,
     userName: user.userName,
     avatar: user.avatar,
-    clanId: user.clanId,
-    clanName: user.clanName,
+    clanId: user.clanRankedId,
+    clanName: user.clanRankedName,
     discordId: user.discordId,
     elo: user.elo,
     joinedAt: new Date(),
@@ -609,6 +652,8 @@ const join = async ({ queue, user }) => {
 
   // check if we can create a game immediately
   // No await, this should run in background, note that the function is protected by a mutex and would not run in parallel to this one, also it will reload the queue from DB
+  // Lazy import to avoid circular dependency: resultRanked -> queue -> discordMessages -> resultRanked
+  const { createGameFromQueue } = require("./queue");
   createGameFromQueue({ queue });
 
   return { ok: true, data: { queue, user } };
@@ -626,6 +671,56 @@ const leave = async ({ queue, user }) => {
 
 const arePlayersReady = ({ resultRanked }) => {
   return resultRanked.redPlayers.every((player) => player.isReady) && resultRanked.bluePlayers.every((player) => player.isReady);
+};
+
+const arePlayersReadyClanWar = ({ clanWarResultRanked }) => {
+  return clanWarResultRanked.clanOnePlayers.every((player) => player.isReady) && clanWarResultRanked.clanTwoPlayers.every((player) => player.isReady);
+};
+
+const voteBanPickStep = async ({ user, clanWarResultRanked, map }) => {
+  if (!clanWarResultRanked) return { ok: false, message: "Clan war result ranked not found" };
+  if (!map) return { ok: false, message: "Map not found" };
+  if (user.clanId === null) return { ok: false, message: "Player not in the two clans" };
+  if (
+    user.clanRankedId.toString() !== clanWarResultRanked?.clanOneId.toString() &&
+    user.clanRankedId.toString() !== clanWarResultRanked.clanTwoId?.toString()
+  )
+    return { ok: false, message: "Player not in the two clans" };
+  if (user.clanRankedId.toString() !== clanWarResultRanked.clanStepId?.toString()) return { ok: false, message: "Not your turn !" };
+
+  if (!clanWarResultRanked.pendingMaps.some((m) => m._id.toString() === map._id.toString())) {
+    return { ok: false, message: "Map not in pending maps" };
+  }
+
+  clanWarResultRanked.pendingMaps.forEach((m) => {
+    if (m._id.toString() === map._id.toString()) {
+      m.votedBy.filter((u) => u.toString() !== user._id.toString());
+    }
+  });
+
+  const pendingMap = clanWarResultRanked.pendingMaps.find((m) => m._id.toString() === map._id.toString());
+  pendingMap.votedBy.push(user._id);
+  await clanWarResultRanked.save();
+
+  return { ok: true };
+};
+
+const tryFindVotedMap = ({ clanWarResultRanked }) => {
+  if (clanWarResultRanked.pendingMaps.length === 0) return { ok: true, data: { map: null } };
+  const currentClanVoters =
+    clanWarResultRanked.clanStepId === clanWarResultRanked.clanOneId ? clanWarResultRanked.clanOnePlayers : clanWarResultRanked.clanTwoPlayers;
+
+  const totalVotes = currentClanVoters.length / 2;
+  const minimumVotes = Math.max(1, Math.ceil(totalVotes * 0.5));
+
+  for (const map of clanWarResultRanked.pendingMaps) {
+    const votedBy = map.votedBy.length;
+    if (votedBy >= minimumVotes) {
+      return { ok: true, data: { map } };
+    }
+  }
+
+  return { ok: true, data: { map: null } };
 };
 
 const arePlayersVotedRed = ({ resultRanked }) => {
@@ -735,16 +830,23 @@ const voteBlue = async ({ resultRanked, user }) => {
 const deleteResultRankedDiscord = async ({ resultRanked }) => {
   if (!resultRanked.guildId) return { ok: true };
 
-  await discordService.deleteChannel({ channelId: resultRanked.textChannelDisplayResultId });
-  resultRanked.textChannelDisplayResultId = null;
+  if (resultRanked.messageResultId) {
+    await discordService.deleteMessage({ channelId: resultRanked.textChannelDisplayResultId, messageId: resultRanked.messageResultId });
+    resultRanked.messageResultId = null;
+  }
 
-  await discordService.deleteChannel({ channelId: resultRanked.voiceRedChannelId });
-  resultRanked.voiceRedChannelId = null;
+  if (!resultRanked.clanWar) {
+    await discordService.deleteChannel({ channelId: resultRanked.textChannelDisplayResultId });
+    resultRanked.textChannelDisplayResultId = null;
 
-  await discordService.deleteChannel({ channelId: resultRanked.voiceBlueChannelId });
-  resultRanked.voiceBlueChannelId = null;
+    await discordService.deleteChannel({ channelId: result.voiceRedChannelId });
+    resultRanked.voiceRedChannelId = null;
 
-  discordService.unregisterButtonCallback(resultRanked.readyButtonId);
+    await discordService.deleteChannel({ channelId: resultRanked.voiceBlueChannelId });
+    result.voiceBlueChannelId = null;
+
+    discordService.unregisterButtonCallback(resultRanked.readyButtonId);
+  }
 
   await freeMutexWithId(resultRanked._id.toString());
 
@@ -760,13 +862,17 @@ module.exports = {
   computeEloResultRanked,
   parseWebhookMessage,
   ready,
+  readyClanWar,
   arePlayersReady,
+  arePlayersReadyClanWar,
   join,
   leave,
   deleteResultRankedDiscord,
   voteCancel,
   voteRed,
   voteBlue,
+  voteBanPickStep,
+  tryFindVotedMap,
   arePlayersVotedRed,
   arePlayersVotedBlue,
   arePlayersVotedCancel,

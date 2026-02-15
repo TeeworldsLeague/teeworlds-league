@@ -4,7 +4,6 @@ import Loader from "../../../components/Loader";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { modesWithLabel } from "../../../components/utils";
-import { enumMapsWithLabel } from "../../../enums/enumMaps";
 import { useSelector } from "react-redux";
 
 const List = () => {
@@ -109,7 +108,7 @@ const List = () => {
                 <td className="border px-4 py-2 cursor-pointer">{modesWithLabel.find((m) => m.value === queue.mode)?.label ?? "Unknown"}</td>
                 <td className="border px-4 py-2 cursor-pointer">
                   {queue.maps.map((map) => (
-                    <div key={map}>{enumMapsWithLabel.find((m) => m.value === map)?.label ?? "Unknown"}</div>
+                    <div key={map._id}>{map.name}</div>
                   ))}
                 </td>
                 <td className="border px-4 py-2 cursor-pointer">{queue.players.length}</td>

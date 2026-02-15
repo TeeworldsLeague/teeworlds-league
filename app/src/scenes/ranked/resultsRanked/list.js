@@ -115,24 +115,11 @@ const List = () => {
         setFilters={setFilters}
         titles={["Date", "Mode", "Map", "ELO Red", "Score", "ELO Blue", "Winner", "Status"]}
         elements={results.map((result) => ({
-          _id: result._id,
-          date: result.date,
-          mode: result.mode,
-          map: result.map,
-          redEloBefore: result.redEloBefore,
-          redScore: result.redScore,
-          blueEloBefore: result.blueEloBefore,
-          blueScore: result.blueScore,
-          winnerName: result.winnerName,
-          freezed: result.freezed,
-          winnerSide: result.winnerSide,
-          redEloGain: result.redEloGain,
-          blueEloGain: result.blueEloGain,
-          isForfeit: result.isForfeit,
+          ...result,
           renderFunctions: [
             (element) => displayDateWithTimeUntilNow(new Date(element.date)),
             (element) => modesWithLabel.find((m) => m.value === element.mode)?.label ?? "Unknown",
-            (element) => enumMapsWithLabel.find((m) => m.value === element.map)?.label ?? "Unknown",
+            (element) => element.mapName ?? "Unknown",
             (element) => {
               if (element.isForfeit) {
                 return element.winnerSide === "red"

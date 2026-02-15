@@ -1,6 +1,4 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-const enumUserRole = require("../enums/enumUserRole");
 const ObjectId = mongoose.Types.ObjectId;
 
 const MODELNAME = "clan";

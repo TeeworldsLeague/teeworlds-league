@@ -3,33 +3,19 @@ import api from "../../../services/api";
 import Loader from "../../../components/Loader";
 import { useParams } from "react-router";
 import toast from "react-hot-toast";
-import Modal from "../../../components/Modal";
 import { useNavigate } from "react-router-dom";
-import { MdDelete } from "react-icons/md";
-import Player from "../../../components/Player";
 import { useSelector } from "react-redux";
 
 const Details = () => {
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [playerSelected, setPlayerSelected] = useState(null);
-  const [players, setPlayers] = useState([]);
-  const [isRed, setIsRed] = useState(true);
   const [canEdit, setCanEdit] = useState(false);
 
   const [mode, setMode] = useState(null);
-  const [canUpdate, setCanUpdate] = useState(false);
 
   const modeId = useParams().id;
   const navigate = useNavigate();
 
   const realUser = useSelector((state) => state.Auth.user);
-
-  const getPlayers = async () => {
-    const { ok, data } = await api.post(`/user/search`, {});
-    if (!ok) return toast.error("Erreur while fetching players");
-    setPlayers(data);
-  };
 
   const get = async () => {
     const { ok, data } = await api.get(`/mode/${modeId}`);
@@ -40,7 +26,6 @@ const Details = () => {
 
     setCanEdit(realUser?.role === "ADMIN");
 
-    setCanUpdate(false);
     setLoading(false);
   };
 
@@ -49,8 +34,8 @@ const Details = () => {
   }, [modeId]);
 
   const handleSubmit = async () => {
-    const { ok } = await api.put(`/mode/${modeId}`, { ...mode });
-    if (!ok) toast.error("Erreur while updating result");
+    const res = await api.put(`/mode/${modeId}`, { ...mode });
+    if (!res.ok) return;
 
     toast.success("Mode updated");
     navigate("../../modes");
@@ -67,7 +52,6 @@ const Details = () => {
   };
 
   const handleChange = (e) => {
-    setCanUpdate(true);
     const { name, value } = e.target;
     setMode({ ...mode, [name]: value });
   };
@@ -91,6 +75,24 @@ const Details = () => {
           placeholder="Name of the mode"
           disabled={!canEdit}
         />
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700 text-sm font-bold mt-2" htmlFor="eloMode">
+          Elo Mode
+        </label>
+        <select
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id="eloMode"
+          name="eloMode"
+          onChange={handleChange}
+          value={mode.eloMode}
+          disabled={!canEdit}>
+          <option value="" disabled>
+            Select a elo mode
+          </option>
+          <option value="ELO">ELO</option>
+          <option value="SKILL">SKILL</option>
+        </select>
       </div>
 
       {canEdit && (

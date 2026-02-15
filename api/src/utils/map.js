@@ -1,9 +1,9 @@
-const { enumMapsWithLabel } = require("../enums/enumMaps");
+const MapModel = require("../models/map");
 
-const detectMapFromServer = (mapString) => {
+const detectMapFromServer = async (mapString) => {
   const mapName = mapString.split("/").pop();
-  const foundMap = enumMapsWithLabel.find((map) => map.label === mapName);
-  return foundMap ? foundMap.value : null;
+  const foundMap = await MapModel.findOne({ serverNames: mapName });
+  return foundMap ? foundMap : null;
 };
 
 module.exports = { detectMapFromServer };

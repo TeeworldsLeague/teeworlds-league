@@ -1,13 +1,11 @@
 const mongoose = require("mongoose");
-const { enumEloMode } = require("../enums/enumModes");
 
-const MODELNAME = "mode";
+const MODELNAME = "map";
 
 const Schema = new mongoose.Schema(
   {
-    name: { type: String, trim: true, default: "gCTF 2v2" },
-
-    eloMode: { type: String, enum: enumEloMode, trim: true, default: enumEloMode.ELO },
+    name: { type: String, trim: true, default: "ctf_5" },
+    serverNames: { type: [String], trim: true, default: [] },
   },
   {
     timestamps: true,
@@ -18,7 +16,7 @@ Schema.methods.responseModel = function () {
   return {
     _id: this._id,
     name: this.name,
-    eloMode: this.eloMode,
+    serverNames: this.serverNames || [],
   };
 };
 

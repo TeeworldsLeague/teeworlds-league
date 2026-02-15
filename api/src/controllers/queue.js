@@ -4,13 +4,15 @@ const passport = require("passport");
 
 const QueueModel = require("../models/queue");
 const ModeModel = require("../models/mode");
+const ResultRankedModel = require("../models/resultRanked");
 const enumUserRole = require("../enums/enumUserRole");
 const { catchErrors } = require("../utils");
 const { enumNumberOfPlayersPerTeam, enumNumberOfPlayersForGame, enumModes } = require("../enums/enumModes");
 const discordService = require("../services/discordService");
 const { join, leave } = require("../utils/resultRanked");
-const { discordMessageQueue, discordMessageClassement } = require("../utils/discordMessages");
-const { runExclusiveWithId, freeMutexWithId } = require('../utils/mutex');
+const { discordMessageQueue, discordMessageClassement } = require("../utils/discordMessages").resultRankedMessages;
+const { runExclusiveWithId, freeMutexWithId } = require("../utils/mutex");
+
 const createNewQueue = async ({ queue }) => {
   const resCreateCategoryQueue = await discordService.createCategory({ guildId: queue.guildId, name: queue.name });
   if (!resCreateCategoryQueue.ok) return resCreateCategoryQueue;
@@ -147,6 +149,7 @@ router.post(
     if (!defaultMode) return res.status(400).send({ ok: false, message: "Default mode not found" });
     obj.modeId = defaultMode._id;
     obj.modeName = defaultMode.name;
+    obj.eloMode = defaultMode.eloMode;
 
     const queue = await QueueModel.create(obj);
     return res.status(200).send({ ok: true, data: queue.responseModel() });
@@ -161,7 +164,7 @@ router.post(
 
     if (body._id) obj._id = body._id;
 
-    const queues = await QueueModel.find(obj);
+    const queues = await QueueModel.find(obj).populate("maps");
 
     return res.status(200).send({ ok: true, data: queues.map((queue) => queue.responseModel()) });
   }),
@@ -249,7 +252,7 @@ router.put(
 
     const objUpdate = {};
     if (body.name) objUpdate.name = body.name;
-    if (body.maps) objUpdate.maps = body.maps;
+    if (body.maps) objUpdate.maps = body.maps.map((map) => ({ ...map, mapId: map._id }));
     if (body.mode) {
       objUpdate.mode = body.mode;
     }
@@ -265,6 +268,14 @@ router.put(
 
       objUpdate.modeId = mode._id;
       objUpdate.modeName = mode.name;
+      objUpdate.eloMode = mode.eloMode;
+    }
+    if (body.clanWar && queue.clanWar !== body.clanWar) {
+      const resultsRanked = await ResultRankedModel.find({ queueId: id });
+      if (resultsRanked.length > 0) {
+        return res.status(400).send({ ok: false, message: "Queue is used in a result ranked, you can't change the clan war mode." });
+      }
+      objUpdate.clanWar = body.clanWar;
     }
 
     queue.set(objUpdate);
